@@ -1033,6 +1033,7 @@ export default function App() {
               </div>
             )}
             {listMode==='list'&&(
+            <div className="space-y-4">
             {repairs.sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
               <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                 {rep.imageUrl&&<img src={rep.imageUrl} alt="" className="w-full h-36 object-cover rounded-2xl mb-4"/>}
@@ -1073,6 +1074,7 @@ export default function App() {
               </div>
             ))}
             {repairs.length===0&&<EC icon={<Car size={36}/>} text="No hay servicios" dm={dm}/>}
+            </div>
             )}
           </div>
         )}
@@ -1168,7 +1170,6 @@ export default function App() {
                   </div>
                 )}
               </div>
-            ))}
             ))}
             {clients.length===0&&<EC icon={<Users size={36}/>} text="No hay clientes" dm={dm}/>}
           </div>

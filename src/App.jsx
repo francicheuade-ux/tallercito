@@ -600,7 +600,7 @@ export default function App() {
 
   // ── MAIN APP ──────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen font-sans pb-28 md:pb-0 md:pl-64 transition-colors duration-300 ${dm?'bg-[#090b0f] text-white':'bg-[#f4f5f9] text-slate-900'}`}>
+    <div className={`min-h-screen font-sans pb-28 ${view==='dashboard'?'md:pl-64':''} transition-colors duration-300 ${dm?'bg-[#090b0f] text-white':'bg-[#f4f5f9] text-slate-900'}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
         *{font-family:'Space Grotesk',sans-serif;box-sizing:border-box}
@@ -734,8 +734,8 @@ export default function App() {
         </div>
       )}
 
-      {/* SIDEBAR */}
-      <nav className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 p-5 z-50 transition-colors" style={{background:dm?'#07090d':'#0c1018',borderRight:'1px solid rgba(255,255,255,0.06)',boxShadow:'4px 0 24px rgba(0,0,0,0.3)'}}>
+      {/* SIDEBAR — desktop only, visible on dashboard */}
+      <nav className={`hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 p-5 z-50 transition-all duration-300 ${view==='dashboard'?'translate-x-0 opacity-100':'translate-x-[-100%] opacity-0 pointer-events-none'}`} style={{background:dm?'#07090d':'#0c1018',borderRight:'1px solid rgba(255,255,255,0.06)',boxShadow:'4px 0 24px rgba(0,0,0,0.3)'}}>
         <div className="flex items-center gap-3 mb-5">
           <div className="p-2 rounded-xl flex-shrink-0" style={{background:'linear-gradient(135deg,#f97316,#ea580c)'}}><Wrench size={20} className="text-white"/></div>
           <div><h1 className="text-white font-display font-black text-base leading-tight">TallerMaster</h1><p className="text-slate-500 text-xs">{tallerConfig.nombre}</p></div>
@@ -761,8 +761,8 @@ export default function App() {
         </div>
       </nav>
 
-      {/* FLOATING MOBILE NAV */}
-      <div className={`md:hidden floating-nav`} style={{background:dm?'rgba(22,27,34,0.92)':'rgba(255,255,255,0.92)',boxShadow:dm?'0 8px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.06)':'0 8px 32px rgba(0,0,0,0.15),0 0 0 1px rgba(0,0,0,0.06)'}}>
+      {/* FLOATING MOBILE NAV — always visible */}
+      <div className="md:hidden floating-nav" style={{background:dm?'rgba(22,27,34,0.92)':'rgba(255,255,255,0.92)',boxShadow:dm?'0 8px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.06)':'0 8px 32px rgba(0,0,0,0.15),0 0 0 1px rgba(0,0,0,0.06)'}}>
         {[
           {id:'dashboard',Icon:LayoutDashboard,label:'Panel'},
           {id:'list',Icon:Box,label:'Stock'},
@@ -777,6 +777,23 @@ export default function App() {
         ))}
       </div>
 
+      {/* SLIM TOP BAR — shows on all non-dashboard views */}
+      {view!=='dashboard'&&(
+        <div className={`fixed top-0 left-0 right-0 z-40 flex items-center gap-3 px-4 py-3 ${dm?'bg-[#07090d]':'bg-white'}`} style={{borderBottom:`1px solid ${dm?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}`,backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
+          <button onClick={()=>setView('dashboard')} className={`p-2 rounded-xl flex-shrink-0 transition-colors ${dm?'hover:bg-[#161b22] text-slate-300':'hover:bg-slate-100 text-slate-600'}`}><ChevronLeft size={20}/></button>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="p-1.5 rounded-lg flex-shrink-0" style={{background:'linear-gradient(135deg,#ff6b1a,#e85510)'}}><Wrench size={13} className="text-white"/></div>
+            <span className={`font-display font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{
+              {list:'Inventario',repairs:'Servicios',budgets:'Presupuestos',clients:'Clientes',vehicles_list:'Vehículos',history:'Historial',stock_history:'Mov. Stock',stats:'Estadísticas',ai_assistant:'Asistente IA',config:'Configuración',details:'Detalle',add:'Nuevo Repuesto',add_repair:'Nuevo Servicio',edit_repair:'Editar Servicio',add_budget:'Nuevo Presupuesto',edit_budget:'Editar Presupuesto',add_client:'Nuevo Cliente',edit_client:'Editar Cliente',add_vehicle:'Nuevo Vehículo',edit_vehicle:'Editar Vehículo',edit_product:'Editar Repuesto',search:'Búsqueda',camera:'Cámara',scan:'Escáner QR'}[view]||view
+            }</span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={startQRScan} className={`p-2 rounded-xl transition-colors ${dm?'hover:bg-[#161b22] text-orange-500':'hover:bg-orange-50 text-orange-500'}`}><QrCode size={18}/></button>
+            <button onClick={()=>setDarkMode(!dm)} className={`p-2 rounded-xl transition-colors ${dm?'hover:bg-[#161b22] text-slate-400':'hover:bg-slate-100 text-slate-500'}`}>{dm?<Sun size={18}/>:<Moon size={18}/>}</button>
+          </div>
+        </div>
+      )}
+
       {/* CONTEXTUAL FAB — shows + button per section */}
       {['list','repairs','budgets','clients','vehicles_list'].includes(view)&&(
         <button
@@ -787,7 +804,7 @@ export default function App() {
             else if(view==='clients') setView('add_client');
             else if(view==='vehicles_list') setView('add_vehicle');
           }}
-          className="fixed bottom-28 right-5 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95"
+          className="fixed bottom-8 right-5 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95"
           style={{background:'linear-gradient(135deg,#ff6b1a,#e85510)',boxShadow:'0 8px 28px rgba(249,115,22,0.55),0 0 0 4px rgba(249,115,22,0.15)'}}
         >
           <Plus size={26} className="text-white"/>
@@ -802,7 +819,7 @@ export default function App() {
         </div>
       )}
 
-      <main className="p-4 md:p-8 max-w-4xl mx-auto">
+      <main className={`p-4 md:p-8 max-w-4xl mx-auto ${view!=='dashboard'?'pt-16':''}`}>
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(

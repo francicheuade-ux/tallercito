@@ -32,10 +32,10 @@ const GEMINI_KEY = "AIzaSyDRMjep-3rDCWAfVYDZo2DQNo-tHkbRJ0U";
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const STATUS_CONFIG = {
-  pendiente: { label:'Pendiente', tw:'bg-amber-100 text-amber-700', dot:'bg-amber-400', icon:'⏳' },
-  en_proceso: { label:'En proceso', tw:'bg-blue-100 text-blue-700', dot:'bg-blue-500', icon:'🔧' },
-  listo: { label:'Listo', tw:'bg-emerald-100 text-emerald-700', dot:'bg-emerald-500', icon:'✅' },
-  entregado: { label:'Entregado', tw:'bg-slate-100 text-slate-500', dot:'bg-slate-400', icon:'📦' },
+  pendiente: { label:'Pendiente', tw:'bg-amber-50 text-amber-700 border-amber-200', dot:'bg-amber-400', icon:'⏳' },
+  en_proceso: { label:'En proceso', tw:'bg-blue-50 text-blue-700 border-blue-200', dot:'bg-blue-500', icon:'🔧' },
+  listo: { label:'Listo', tw:'bg-emerald-50 text-emerald-700 border-emerald-200', dot:'bg-emerald-500', icon:'✅' },
+  entregado: { label:'Entregado', tw:'bg-slate-100 text-slate-500 border-slate-200', dot:'bg-slate-400', icon:'📦' },
 };
 const PAYMENT_CONFIG = {
   debe: { label:'Debe', color:'#ef4444', bg:'rgba(239,68,68,0.12)', icon:'❌' },
@@ -57,7 +57,7 @@ const EMPTY_REPAIR = { vehicle:'', plate:'', km:'', clientId:'', clientName:'', 
 const EMPTY_BUDGET = { clientId:'', clientName:'', clientPhone:'', vehicle:'', plate:'', km:'', description:'', partsUsed:[], laborCost:0, notes:'', date:new Date().toISOString().split('T')[0], empresaId:'1' };
 const EMPTY_CLIENT = { name:'', phone:'', email:'', vehicles:[] };
 const EMPTY_VEHICLE = { make:'', model:'', year:'', plate:'', km:'', clientId:'', clientName:'' };
-const EMPTY_PRODUCT = { name:'', sku:'', location:'', quantity:0, minStock:1, cost:0, imageUrl:'', description:'', supplier:'', supplierPhone:'' };
+const EMPTY_PRODUCT = { name:'', sku:'', barcode:'', location:'', quantity:0, minStock:1, cost:0, imageUrl:'', description:'', supplier:'', supplierPhone:'' };
 
 export default function App() {
   // Auth state
@@ -104,6 +104,8 @@ export default function App() {
   // QR
   const [scannedProduct, setScannedProduct] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [scannedNewBarcode, setScannedNewBarcode] = useState(null);
+  const [showNewBarcodeModal, setShowNewBarcodeModal] = useState(false);
   const [qrAction, setQrAction] = useState(null);
   const [selectedRepairForQR, setSelectedRepairForQR] = useState('');
   const [qrQty, setQrQty] = useState(1);
@@ -214,12 +216,28 @@ export default function App() {
         if (!window.Html5Qrcode){setTimeout(go,500);return;}
         try {
           qr=new window.Html5Qrcode("qr-reader");
-          await qr.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:250}},
+          const formats = [
+            window.Html5QrcodeSupportedFormats?.QR_CODE,
+            window.Html5QrcodeSupportedFormats?.EAN_13,
+            window.Html5QrcodeSupportedFormats?.EAN_8,
+            window.Html5QrcodeSupportedFormats?.CODE_128,
+            window.Html5QrcodeSupportedFormats?.CODE_39,
+            window.Html5QrcodeSupportedFormats?.UPC_A,
+            window.Html5QrcodeSupportedFormats?.UPC_E,
+          ].filter(Boolean);
+          await qr.start({facingMode:"environment"},{fps:10,qrbox:{width:280,height:160},formatsToSupport:formats.length>0?formats:undefined},
             text=>{
-              const found=inventory.find(p=>p.sku===text||p.id===text);
-              if (found){setScannedProduct(found);setQrQty(1);setSelectedRepairForQR('');setQrAction(null);setShowQRModal(true);}
-              else showNotif("QR no encontrado","error");
-              setView('dashboard'); qr.stop().catch(()=>{});
+              const found=inventory.find(p=>p.sku===text||p.id===text||p.barcode===text);
+              if (found){
+                setScannedProduct(found);setQrQty(1);setSelectedRepairForQR('');setQrAction(null);setShowQRModal(true);
+                setView('dashboard'); qr.stop().catch(()=>{});
+              } else {
+                // Not in inventory — open new product form with barcode pre-filled
+                setView('dashboard'); qr.stop().catch(()=>{});
+                setNewProduct({...EMPTY_PRODUCT, sku:text, barcode:text});
+                showNotif('Código nuevo — completá los datos del repuesto');
+                setView('add');
+              }
             },()=>{});
         } catch { setView('dashboard'); }
       };
@@ -535,15 +553,15 @@ export default function App() {
 
   // ── LOGIN SCREEN ──────────────────────────────────────────────
   if (!currentUser) return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{background:dm?'#0d1117':'linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%)'}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');*{font-family:'DM Sans',sans-serif}.font-display{font-family:'Syne',sans-serif}`}</style>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'linear-gradient(145deg,#0a0a0f 0%,#12100e 40%,#1a0f08 100%)'}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');*{font-family:'Space Grotesk',sans-serif}.font-display{font-family:'Outfit',sans-serif}`}</style>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="w-20 h-20 rounded-3xl mx-auto mb-4 flex items-center justify-center shadow-2xl" style={{background:'linear-gradient(135deg,#f97316,#ea580c)'}}><Wrench size={36} className="text-white"/></div>
           <h1 className="font-display font-black text-3xl text-white">TallerMaster</h1>
           <p className="text-slate-400 text-sm mt-1">Ingresá con tu usuario</p>
         </div>
-        <div className="rounded-3xl p-7 space-y-4" style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',backdropFilter:'blur(20px)'}}>
+        <div className="rounded-3xl p-7 space-y-4" style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,107,26,0.2)',backdropFilter:'blur(24px)',boxShadow:'0 24px 64px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.08)'}}>
           <div>
             <span className="lbl text-slate-400">Usuario</span>
             <div className="relative mt-1">
@@ -571,39 +589,75 @@ export default function App() {
 
   // ── MAIN APP ──────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen font-sans pb-28 md:pb-0 md:pl-64 transition-colors duration-300 ${dm?'bg-[#0d1117] text-white':'bg-[#f0f2f7] text-slate-900'}`}>
+    <div className={`min-h-screen font-sans pb-28 md:pb-0 md:pl-64 transition-colors duration-300 ${dm?'bg-[#090b0f] text-white':'bg-[#f4f5f9] text-slate-900'}`}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
-        *{font-family:'DM Sans',sans-serif}.font-display{font-family:'Syne',sans-serif}
-        .page-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:900;letter-spacing:-0.8px}
-        .card{border-radius:20px;transition:all 0.2s}
-        .card-s{box-shadow:0 2px 12px rgba(0,0,0,0.08),0 0 0 1px rgba(0,0,0,0.04)}
-        .card-hover:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,0.15)!important}
-        .inp{border-radius:12px;padding:11px 14px;width:100%;outline:none;transition:all 0.2s;font-size:14px;border:1.5px solid}
-        .inp:focus{border-color:#f97316!important;box-shadow:0 0 0 4px rgba(249,115,22,0.08)}
-        .btn-primary{background:linear-gradient(135deg,#f97316,#ea580c);color:white;padding:13px 20px;border-radius:14px;font-weight:700;display:flex;align-items:center;gap:8px;justify-content:center;cursor:pointer;border:none;width:100%;font-size:15px;box-shadow:0 4px 16px rgba(249,115,22,0.35);transition:all 0.2s}
-        .btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(249,115,22,0.4)}.btn-primary:disabled{opacity:0.5;transform:none;cursor:not-allowed}
-        .btn-dark{background:#0f172a;color:white;padding:9px 16px;border-radius:11px;font-weight:700;display:flex;align-items:center;gap:6px;justify-content:center;cursor:pointer;border:none;font-size:13px;transition:all 0.2s}.btn-dark:hover{background:#1e293b}
-        .btn-ghost{padding:9px 14px;border-radius:11px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;transition:all 0.2s;border:1.5px solid}
-        .lbl{font-size:11px;font-weight:700;color:#64748b;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.8px;display:block}
-        .status-pill{padding:5px 11px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
-        .nav-item{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:600;transition:all 0.2s;cursor:pointer;border:none;text-align:left}
-        .nav-item.active{background:linear-gradient(135deg,#f97316,#ea580c);color:white;box-shadow:0 4px 14px rgba(249,115,22,0.35)}.nav-item:not(.active){color:#64748b}.nav-item:not(.active):hover{background:rgba(255,255,255,0.06);color:white}
-        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0}
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+        *{font-family:'Space Grotesk',sans-serif;box-sizing:border-box}
+        .font-display{font-family:'Outfit',sans-serif}
+        .page-title{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;letter-spacing:-1px}
+
+        /* CARDS */
+        .card{border-radius:18px;transition:all 0.22s cubic-bezier(.4,0,.2,1)}
+        .card-s{box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.06)}
+        .card-dark{box-shadow:0 1px 3px rgba(0,0,0,0.3),0 4px 20px rgba(0,0,0,0.2)}
+        .card-hover:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.18)!important}
+
+        /* INPUTS */
+        .inp{border-radius:12px;padding:12px 15px;width:100%;outline:none;transition:all 0.2s;font-size:14px;border:2px solid;font-family:'Space Grotesk',sans-serif}
+        .inp:focus{border-color:#f97316!important;box-shadow:0 0 0 4px rgba(249,115,22,0.1)}
+
+        /* BUTTONS */
+        .btn-primary{background:linear-gradient(135deg,#ff6b1a,#e85510);color:white;padding:13px 20px;border-radius:13px;font-weight:700;display:flex;align-items:center;gap:8px;justify-content:center;cursor:pointer;border:none;width:100%;font-size:15px;box-shadow:0 4px 20px rgba(249,115,22,0.4),0 1px 3px rgba(0,0,0,0.2);transition:all 0.2s;letter-spacing:0.2px}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(249,115,22,0.5)}.btn-primary:disabled{opacity:0.45;transform:none;cursor:not-allowed}
+        .btn-dark{background:#111827;color:white;padding:9px 16px;border-radius:11px;font-weight:700;display:flex;align-items:center;gap:6px;justify-content:center;cursor:pointer;border:none;font-size:13px;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.2)}.btn-dark:hover{background:#1f2937}
+        .btn-ghost{padding:9px 14px;border-radius:11px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;transition:all 0.2s;border:2px solid}
+
+        /* LABELS & STATUS */
+        .lbl{font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;display:block}
+        .status-pill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px;border:1.5px solid transparent}
+
+        /* SIDEBAR NAV */
+        .nav-item{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:600;transition:all 0.2s;cursor:pointer;border:none;text-align:left;letter-spacing:0.1px}
+        .nav-item.active{background:linear-gradient(135deg,#ff6b1a,#e85510);color:white;box-shadow:0 4px 16px rgba(249,115,22,0.4)}
+        .nav-item:not(.active){color:#6b7280}.nav-item:not(.active):hover{background:rgba(255,255,255,0.07);color:#e5e7eb}
+
+        /* MODALS */
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0}
         .modal-sheet{border-radius:28px 28px 0 0;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
-        .modal-center{position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
-        .g-card{border-radius:20px;padding:20px;overflow:hidden;position:relative}
+        .modal-center{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
+
+        /* MISC */
+        .g-card{border-radius:18px;padding:20px;overflow:hidden;position:relative}
         .shutter-btn{width:72px;height:72px;border-radius:50%;background:white;border:4px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;box-shadow:0 4px 20px rgba(0,0,0,0.4)}.shutter-btn:active{transform:scale(0.92)}
         .shutter-inner{width:56px;height:56px;border-radius:50%;background:white;border:2px solid #e2e8f0}
-        @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}.anim{animation:slideUp 0.25s ease-out}
-        @keyframes fadeIn{from{opacity:0}to{opacity:1}}.fade{animation:fadeIn 0.2s ease-out}
-        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#374151;border-radius:4px}
-        .floating-nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;border-radius:28px;padding:10px 16px;display:flex;align-items:center;gap:4px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
-        .float-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 12px;border-radius:18px;border:none;cursor:pointer;transition:all 0.2s;min-width:56px}
-        .float-btn.active{background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 4px 14px rgba(249,115,22,0.4)}
+
+        /* ANIMATIONS */
+        @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes pulse-ring{0%{transform:scale(1);opacity:1}100%{transform:scale(1.5);opacity:0}}
+        .anim{animation:slideUp 0.28s cubic-bezier(.4,0,.2,1)}
+        .fade{animation:fadeIn 0.2s ease-out}
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(249,115,22,0.3);border-radius:4px}
+
+        /* FLOATING NAV */
+        .floating-nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;border-radius:32px;padding:8px 12px;display:flex;align-items:center;gap:2px;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.1)}
+        .float-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border-radius:22px;border:none;cursor:pointer;transition:all 0.22s cubic-bezier(.4,0,.2,1);min-width:58px}
+        .float-btn.active{background:linear-gradient(135deg,#ff6b1a,#e85510);box-shadow:0 4px 16px rgba(249,115,22,0.5)}
         .float-btn:not(.active){background:transparent}
-        .float-btn.active span{color:white}.float-btn:not(.active) span{color:#64748b}
-        .float-btn.center-btn{background:linear-gradient(135deg,#f97316,#ea580c);border-radius:50%;width:52px;height:52px;min-width:52px;padding:0;justify-content:center;margin-top:-8px;box-shadow:0 6px 20px rgba(249,115,22,0.5)}
+        .float-btn.active span{color:white;font-weight:700}.float-btn:not(.active) span{color:#6b7280}
+        .float-btn.center-btn{background:linear-gradient(135deg,#ff6b1a,#e85510);border-radius:50%;width:54px;height:54px;min-width:54px;padding:0;justify-content:center;margin-top:-10px;box-shadow:0 6px 24px rgba(249,115,22,0.6),0 0 0 4px rgba(249,115,22,0.15)}
+
+        /* INVENTORY THUMBNAIL */
+        .inv-thumb{width:52px;height:52px;border-radius:12px;object-fit:cover;flex-shrink:0}
+        .inv-thumb-placeholder{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+        /* SECTION DIVIDERS */
+        .section-header{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;opacity:0.4;padding:16px 0 8px}
+
+        /* BADGE */
+        .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1.5px solid}
       `}</style>
 
       {/* CONFIRM MODALS */}
@@ -670,7 +724,7 @@ export default function App() {
       )}
 
       {/* SIDEBAR */}
-      <nav className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 p-5 z-50 transition-colors" style={{background:dm?'#010409':'#0a0f1e',borderRight:'1px solid rgba(255,255,255,0.05)'}}>
+      <nav className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 p-5 z-50 transition-colors" style={{background:dm?'#07090d':'#0c1018',borderRight:'1px solid rgba(255,255,255,0.06)',boxShadow:'4px 0 24px rgba(0,0,0,0.3)'}}>
         <div className="flex items-center gap-3 mb-5">
           <div className="p-2 rounded-xl flex-shrink-0" style={{background:'linear-gradient(135deg,#f97316,#ea580c)'}}><Wrench size={20} className="text-white"/></div>
           <div><h1 className="text-white font-display font-black text-base leading-tight">TallerMaster</h1><p className="text-slate-500 text-xs">{tallerConfig.nombre}</p></div>
@@ -720,7 +774,7 @@ export default function App() {
         </div>
       )}
 
-      <main className="p-4 md:p-6 max-w-4xl mx-auto">
+      <main className="p-4 md:p-8 max-w-4xl mx-auto">
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(
@@ -741,22 +795,23 @@ export default function App() {
                 {label:'Stock bajo',value:inventory.filter(p=>p.quantity<=p.minStock).length,from:'#ef4444',to:'#dc2626',Icon:AlertCircle},
                 {label:'Por cobrar',value:`$${repairs.filter(r=>r.paymentStatus==='debe').reduce((s,r)=>s+(r.totalCost||0),0).toLocaleString()}`,from:'#f59e0b',to:'#d97706',Icon:CreditCard},
               ].map(({label,value,from,to,Icon})=>(
-                <div key={label} className="g-card text-white" style={{background:`linear-gradient(135deg,${from},${to})`}}>
-                  <Icon size={18} className="opacity-70 mb-3"/><p className="text-3xl font-display font-black">{value}</p>
-                  <p className="text-xs font-semibold opacity-70 uppercase tracking-wide mt-1">{label}</p>
+                <div key={label} className="g-card text-white" style={{background:`linear-gradient(140deg,${from},${to})`,boxShadow:`0 8px 24px ${from}55`}}>
+                  <div className="flex justify-between items-start mb-3"><Icon size={20} className="opacity-80"/><div className="w-8 h-8 rounded-full flex items-center justify-center" style={{background:'rgba(255,255,255,0.15)'}}><Icon size={13}/></div></div>
+                  <p className="text-3xl font-display font-black leading-none">{value}</p>
+                  <p className="text-xs font-bold opacity-60 uppercase tracking-widest mt-2">{label}</p>
                 </div>
               ))}
             </div>
             <div className="grid grid-cols-3 gap-3">
               {[{label:'Servicio',Icon:Wrench,action:'add_repair'},{label:'Presupuesto',Icon:FileText,action:'add_budget'},{label:'Repuesto',Icon:Plus,action:'add'}].map(({label,Icon,action})=>(
-                <button key={action} onClick={()=>setView(action)} className={`card card-s card-hover p-4 text-left w-full ${dm?'bg-[#161b22]':'bg-white'}`}>
-                  <div className="p-2.5 rounded-xl mb-3 inline-block" style={{background:'linear-gradient(135deg,#fff7ed,#ffedd5)'}}><Icon size={19} className="text-orange-500"/></div>
-                  <p className="font-bold text-sm">+ {label}</p>
+                <button key={action} onClick={()=>setView(action)} className={`card card-s card-hover p-4 text-left w-full ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+                  <div className="p-2.5 rounded-xl mb-3 inline-block" style={{background:'linear-gradient(135deg,#ff6b1a22,#ff6b1a11)',border:'1px solid rgba(249,115,22,0.2)'}}><Icon size={19} className="text-orange-500"/></div>
+                  <p className={`font-bold text-sm ${dm?'text-white':'text-slate-800'}`}>+ {label}</p>
                 </button>
               ))}
             </div>
             {chartData.some(d=>d.total>0)&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}>
+              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
                 <p className="font-display font-bold mb-4 text-sm">Ingresos — últimos 6 meses</p>
                 <div className="flex items-end gap-2 h-28">
                   {chartData.map((d,i)=>(
@@ -770,7 +825,7 @@ export default function App() {
               </div>
             )}
             {repairs.filter(r=>r.status!=='entregado').length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}>
+              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
                 <div className="flex justify-between items-center mb-4"><p className="font-display font-bold text-sm">Servicios activos</p><button onClick={()=>setView('repairs')} className="text-xs text-orange-500 font-bold">Ver todos →</button></div>
                 {repairs.filter(r=>r.status!=='entregado').slice(0,4).map(rep=>(
                   <div key={rep.id} className={`flex items-center justify-between py-2.5 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}>
@@ -790,7 +845,7 @@ export default function App() {
               </div>
             )}
             {inventory.filter(p=>p.quantity<=p.minStock).length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`} style={{borderLeft:'4px solid #ef4444'}}>
+              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'4px solid #ef4444'}}>
                 <p className="font-bold text-red-500 flex items-center gap-2 text-sm mb-3"><AlertCircle size={14}/>Stock bajo</p>
                 {inventory.filter(p=>p.quantity<=p.minStock).map(p=>(
                   <div key={p.id} className={`flex justify-between text-sm py-1.5 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}><span className="font-medium">{p.name}</span><span className="font-black text-red-500">{p.quantity} un.</span></div>
@@ -823,27 +878,38 @@ export default function App() {
                 <DangerBtn onClick={()=>deleteAll('inventory')}/>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-2">
               {inventory.filter(p=>p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item=>(
-                <div key={item.id} className={`card card-s card-hover ${dm?'bg-[#161b22]':'bg-white'}`}>
-                  {item.imageUrl?<img src={item.imageUrl} alt={item.name} className="w-full h-28 object-cover" style={{borderRadius:'20px 20px 0 0'}}/>:<div className={`w-full h-12 flex items-center justify-center ${dm?'bg-[#0d1117]':'bg-slate-50'}`} style={{borderRadius:'20px 20px 0 0'}}><Package size={20} className="opacity-20"/></div>}
-                  <div className="p-4">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-sm flex-1 pr-2">{item.name}</h3>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black flex-shrink-0 ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
+                <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer flex items-center gap-4 p-3.5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+                  {/* Thumbnail */}
+                  {item.imageUrl
+                    ? <img src={item.imageUrl} alt={item.name} className="inv-thumb"/>
+                    : <div className={`inv-thumb-placeholder ${dm?'bg-[#0d1117]':'bg-slate-100'}`}><Package size={20} className={dm?'text-slate-600':'text-slate-300'}/></div>
+                  }
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{item.name}</h3>
+                      {item.quantity<=item.minStock&&<span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500"/>}
                     </div>
-                    <p className={`text-xs mt-1 flex items-center gap-1 ${dm?'text-slate-500':'text-slate-400'}`}><MapPin size={10}/>{item.location||'Sin ubicación'}</p>
-                    {item.supplier&&<p className={`text-xs mt-0.5 ${dm?'text-slate-500':'text-slate-400'}`}>🏪 {item.supplier}</p>}
-                    <p className="text-lg font-black font-display mt-1">${Number(item.cost).toLocaleString()}</p>
-                    <div className="flex gap-2 mt-3">
-                      <button onClick={()=>{setSelectedProduct(item);setView('details');}} className={`btn-ghost flex-1 text-xs py-1.5 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}><Package size={12}/>Ver</button>
-                      <button onClick={()=>{setEditingProduct({...item});setView('edit_product');}} className={`btn-ghost flex-1 text-xs py-1.5 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}><Edit3 size={12}/>Editar</button>
-                      <button onClick={()=>deleteItem('inventory',item.id,item.name)} className="p-1.5 text-red-400 rounded-xl"><Trash2 size={13}/></button>
+                    <div className={`flex items-center gap-3 mt-0.5 text-xs ${dm?'text-slate-500':'text-slate-400'}`}>
+                      {item.location&&<span className="flex items-center gap-1"><MapPin size={9}/>{item.location}</span>}
+                      {item.supplier&&<span>🏪 {item.supplier}</span>}
                     </div>
+                  </div>
+                  {/* Right side */}
+                  <div className="text-right flex-shrink-0">
+                    <p className={`font-black font-display text-base ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
+                  </div>
+                  {/* Actions */}
+                  <div className="flex gap-1 flex-shrink-0" onClick={e=>e.stopPropagation()}>
+                    <button onClick={()=>{setEditingProduct({...item});setView('edit_product');}} className={`p-2 rounded-xl transition-colors ${dm?'hover:bg-[#0d1117] text-slate-400':'hover:bg-slate-100 text-slate-500'}`}><Edit3 size={14}/></button>
+                    <button onClick={()=>deleteItem('inventory',item.id,item.name)} className="p-2 rounded-xl text-red-400 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button>
                   </div>
                 </div>
               ))}
-              {inventory.length===0&&<EC icon={<Package size={36}/>} text="Sin repuestos" dm={dm} className="col-span-3"/>}
+              {inventory.length===0&&<EC icon={<Package size={36}/>} text="Sin repuestos" dm={dm}/>}
             </div>
           </div>
         )}
@@ -895,7 +961,7 @@ export default function App() {
               ))}
             </div>
             {repairs.sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
-              <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}>
+              <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                 {rep.imageUrl&&<img src={rep.imageUrl} alt="" className="w-full h-36 object-cover rounded-2xl mb-4"/>}
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1">
@@ -950,7 +1016,7 @@ export default function App() {
             {budgets.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
               const emp=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
               return (
-                <div key={budget.id} className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}>
+                <div key={budget.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-bold">{budget.clientName}</h4>
@@ -988,7 +1054,7 @@ export default function App() {
               </div>
             </div>
             {clients.map(client=>(
-              <div key={client.id} className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}>
+              <div key={client.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #8b5cf6'}}>
                 <div className="flex justify-between items-start mb-2">
                   <div><h4 className="font-bold">{client.name}</h4>{client.phone&&<p className={`text-sm mt-0.5 ${dm?'text-slate-400':'text-slate-500'}`}>📞 {client.phone}</p>}{client.email&&<p className={`text-xs ${dm?'text-slate-500':'text-slate-400'}`}>{client.email}</p>}</div>
                   <div className="flex gap-2">
@@ -1023,7 +1089,7 @@ export default function App() {
               </div>
             </div>
             {vehicles.map(v=>(
-              <div key={v.id} className={`card card-s p-5 flex justify-between items-start ${dm?'bg-[#161b22]':'bg-white'}`}>
+              <div key={v.id} className={`card card-s p-5 flex justify-between items-start ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #14b8a6'}}>
                 <div>
                   <p className="font-bold">🚗 {v.make} {v.model} {v.year}</p>
                   {v.plate&&<p className={`font-mono text-sm mt-0.5 ${dm?'text-slate-400':'text-slate-500'}`}>{v.plate}</p>}
@@ -1047,7 +1113,7 @@ export default function App() {
             <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15}/><input className={`inp pl-9 ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="Patente o modelo..." value={vehicleFilter} onChange={e=>setVehicleFilter(e.target.value)}/></div>
             {vehicleFilter&&vehicleHistory.length===0&&<div className={`card card-s p-8 text-center text-sm ${dm?'bg-[#161b22] text-slate-500':'bg-white text-slate-400'}`}>Sin registros para "{vehicleFilter}"</div>}
             {vehicleHistory.sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
-              <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}>
+              <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                 <div className="flex justify-between items-start mb-1">
                   <div><h4 className="font-bold">{rep.vehicle} <span className="font-mono text-sm text-slate-400">{rep.plate}</span></h4>
                     <div className={`flex gap-3 text-xs mt-0.5 ${dm?'text-slate-500':'text-slate-400'}`}>{rep.km&&<span>🔢 {Number(rep.km).toLocaleString()} km</span>}{rep.date?.seconds&&<span>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}</div></div>
@@ -1105,7 +1171,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}>
+            <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
               <p className="font-display font-bold mb-4 text-sm">Ingresos últimos 6 meses</p>
               <div className="flex items-end gap-2 h-32">
                 {chartData.map((d,i)=>(
@@ -1118,7 +1184,7 @@ export default function App() {
               </div>
             </div>
             {topServices.length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}>
+              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
                 <p className="font-display font-bold mb-3 text-sm flex items-center gap-2"><Award size={15} className="text-orange-500"/>Servicios más frecuentes</p>
                 {topServices.map(([name,count],i)=>(
                   <div key={i} className={`flex items-center gap-3 py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}>
@@ -1130,7 +1196,7 @@ export default function App() {
               </div>
             )}
             {topParts.length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}>
+              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
                 <p className="font-display font-bold mb-3 text-sm flex items-center gap-2"><Package size={15} className="text-orange-500"/>Repuestos más usados</p>
                 {topParts.map(([name,qty],i)=>(
                   <div key={i} className={`flex items-center gap-3 py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}>
@@ -1149,7 +1215,7 @@ export default function App() {
           <div className="space-y-5 anim max-w-lg mx-auto">
             <h2 className="page-title font-display">Configuración</h2>
             {/* Taller data */}
-            <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22]':'bg-white'}`}>
+            <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
               <p className="font-bold text-sm flex items-center gap-2"><Settings size={15} className="text-orange-500"/>Datos del taller</p>
               {editConfig?(
                 <>
@@ -1175,7 +1241,7 @@ export default function App() {
             </div>
 
             {/* Empresas de facturación */}
-            <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22]':'bg-white'}`}>
+            <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
               <p className="font-bold text-sm flex items-center gap-2"><Building2 size={15} className="text-blue-500"/>Empresas de facturación</p>
               {(tallerConfig.empresas||[]).map((emp,i)=>(
                 <div key={emp.id} className={`rounded-2xl p-4 border ${dm?'bg-[#0d1117] border-[#30363d]':'bg-slate-50 border-slate-200'}`}>
@@ -1219,7 +1285,7 @@ export default function App() {
             </div>
 
             {/* Usuarios */}
-            <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22]':'bg-white'}`}>
+            <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
               <div className="flex justify-between items-center">
                 <p className="font-bold text-sm flex items-center gap-2"><Shield size={15} className="text-green-500"/>Usuarios</p>
                 <button onClick={()=>setShowAddUser(!showAddUser)} className={`btn-ghost text-xs py-1.5 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}><Plus size={13}/>Agregar</button>
@@ -1261,13 +1327,13 @@ export default function App() {
             </div>
 
             {/* Dark mode */}
-            <div className={`card card-s p-5 flex justify-between items-center ${dm?'bg-[#161b22]':'bg-white'}`}>
+            <div className={`card card-s p-5 flex justify-between items-center ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
               <div><p className="font-bold">Tema oscuro</p><p className={`text-xs ${dm?'text-slate-400':'text-slate-500'}`}>Apariencia de la app</p></div>
               <button onClick={()=>setDarkMode(!dm)} className="p-3 rounded-2xl transition-all" style={{background:dm?'rgba(249,115,22,0.15)':'#f1f5f9',color:dm?'#f97316':'#475569'}}>{dm?<Sun size={22}/>:<Moon size={22}/>}</button>
             </div>
 
             {/* Delete all */}
-            <div className={`card card-s p-5 space-y-3 ${dm?'bg-[#161b22]':'bg-white'}`}>
+            <div className={`card card-s p-5 space-y-3 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
               <p className="font-bold text-red-500 text-sm flex items-center gap-2"><Trash2 size={14}/>Zona peligrosa</p>
               <div className="grid grid-cols-2 gap-2">
                 {[['repairs','Servicios'],['budgets','Presupuestos'],['inventory','Inventario'],['clients','Clientes'],['vehicles','Vehículos'],['stock_history','Mov. Stock']].map(([col,label])=>(
@@ -1315,7 +1381,7 @@ export default function App() {
           <div className="fixed inset-0 z-[100] flex flex-col" style={{background:'#000'}}>
             <div className="flex items-center justify-between p-5">
               <button onClick={()=>setView('dashboard')} className="p-3 rounded-full" style={{background:'rgba(255,255,255,0.1)'}}><X size={22} className="text-white"/></button>
-              <p className="text-white font-bold">Escanear repuesto</p>
+              <p className="text-white font-bold">Escanear QR o código de barras</p>
               <div style={{width:48}}/>
             </div>
             <div className="flex-1 relative flex items-center justify-center">
@@ -1366,7 +1432,7 @@ export default function App() {
 
 function SPill({status}){const c=STATUS_CONFIG[status]||STATUS_CONFIG.pendiente;return<span className={`status-pill ${c.tw}`}><span className={`w-1.5 h-1.5 rounded-full ${c.dot}`}/>{c.icon} {c.label}</span>;}
 function PayBadge({status}){const c=PAYMENT_CONFIG[status]||PAYMENT_CONFIG.debe;return<span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{background:c.bg,color:c.color}}>{c.icon} {c.label}</span>;}
-function SSection({title,children,dm}){return<div className={`card card-s p-5 ${dm?'bg-[#161b22]':'bg-white'}`}><p className="lbl mb-3">{title}</p>{children}</div>;}
+function SSection({title,children,dm}){return<div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}><p className="lbl mb-3">{title}</p>{children}</div>;}
 function EC({icon,text,dm,className=''}){return<div className={`card card-s p-16 text-center ${dm?'bg-[#161b22] text-slate-500':'bg-white text-slate-400'} ${className}`}><div className="mx-auto mb-3 opacity-20 flex justify-center">{icon}</div><p>{text}</p></div>;}
 function DangerBtn({onClick}){return<button onClick={onClick} className="p-2.5 rounded-xl text-red-400 border" style={{borderColor:'rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.08)'}}><Trash2 size={16}/></button>;}
 
@@ -1480,6 +1546,7 @@ function ProdForm({isEdit,data,setData,onSubmit,onCancel,dm,sc}){
   return<FCard onSubmit={onSubmit} title={isEdit?'Editar Repuesto':'Nuevo Repuesto'} onCancel={onCancel} dm={dm}>
     <FInp label="Nombre *" required placeholder="Filtro de aceite" value={data.name||''} onChange={e=>setData(f=>({...f,name:e.target.value}))} dm={dm}/>
     <FInp label="Descripción" placeholder="Marca, modelo..." value={data.description||''} onChange={e=>setData(f=>({...f,description:e.target.value}))} dm={dm}/>
+    {data.barcode&&<div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{background:'rgba(249,115,22,0.1)',border:'1px solid rgba(249,115,22,0.2)'}}><QrCode size={14} className="text-orange-500"/><span className="text-xs font-bold text-orange-500">Código: </span><span className="font-mono text-xs">{data.barcode}</span></div>}
     <FInp label="Ubicación" placeholder="Estante A, Cajón 2" value={data.location||''} onChange={e=>setData(f=>({...f,location:e.target.value}))} dm={dm}/>
     <div className="grid grid-cols-2 gap-3">
       <FInp label="Proveedor" placeholder="Dist. X" value={data.supplier||''} onChange={e=>setData(f=>({...f,supplier:e.target.value}))} dm={dm}/>

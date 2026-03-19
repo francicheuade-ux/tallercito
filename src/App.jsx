@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore, collection, doc, onSnapshot, updateDoc,
-  deleteDoc, query, addDoc, serverTimestamp, writeBatch, getDocs
+  deleteDoc, query, addDoc, serverTimestamp, writeBatch, getDocs, setDoc
 } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import {
@@ -61,16 +61,17 @@ const EMPTY_PRODUCT = { name:'', sku:'', location:'', quantity:0, minStock:1, co
 
 export default function App() {
   // Auth state
-  const [currentUser, setCurrentUser] = useState(() => { try { return JSON.parse(localStorage.getItem('tm_user')); } catch { return null; } });
+  const [currentUser, setCurrentUser] = useState(null);
   const [loginForm, setLoginForm] = useState({ username:'', password:'' });
   const [loginError, setLoginError] = useState('');
   const [showPw, setShowPw] = useState(false);
 
   // Config
-  const [tallerConfig, setTallerConfig] = useState(() => { try { return JSON.parse(localStorage.getItem('tm_config')) || DEFAULT_CONFIG; } catch { return DEFAULT_CONFIG; } });
-  const [tallerUsers, setTallerUsers] = useState(() => { try { return JSON.parse(localStorage.getItem('tm_users')) || DEFAULT_USERS; } catch { return DEFAULT_USERS; } });
+  const [tallerConfig, setTallerConfig] = useState(DEFAULT_CONFIG);
+  const [tallerUsers, setTallerUsers] = useState(DEFAULT_USERS);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('tm_dark') === '1');
-  const [orderCounter, setOrderCounter] = useState(() => parseInt(localStorage.getItem('tm_order') || '0'));
+  const [orderCounter, setOrderCounter] = useState(0);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   // Firebase
   const [user, setUser] = useState(null);
@@ -152,16 +153,29 @@ export default function App() {
         setter(items); if(extra) extra(items);
       },console.error);
     });
-    return ()=>unsubs.forEach(u=>u());
+
+    // Load config, users, orderCounter from Firebase (single doc)
+    const configRef = doc(db,'artifacts',appId,'public','appconfig');
+    const unsubConfig = onSnapshot(configRef, snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        if (d.tallerConfig) setTallerConfig(d.tallerConfig);
+        if (d.tallerUsers) setTallerUsers(d.tallerUsers);
+        if (d.orderCounter !== undefined) setOrderCounter(d.orderCounter);
+      }
+      setConfigLoaded(true);
+    }, () => setConfigLoaded(true));
+
+    return ()=>{ unsubs.forEach(u=>u()); unsubConfig(); };
   }, [user]);
 
-  // Login
+  // Login — uses users from Firebase
   const handleLogin = () => {
     const u = tallerUsers.find(u=>u.username===loginForm.username&&u.password===loginForm.password);
-    if (u) { setCurrentUser(u); localStorage.setItem('tm_user',JSON.stringify(u)); setLoginError(''); }
+    if (u) { setCurrentUser(u); setLoginError(''); }
     else setLoginError('Usuario o contraseña incorrectos');
   };
-  const handleLogout = () => { setCurrentUser(null); localStorage.removeItem('tm_user'); };
+  const handleLogout = () => { setCurrentUser(null); };
 
   // Camera
   const startCamera = async target => {
@@ -214,8 +228,14 @@ export default function App() {
     return ()=>{if(qr?.isScanning)qr.stop().catch(()=>{});}; 
   },[view,inventory,showNotif]);
 
-  // Order
-  const nextOrder = () => { const n=orderCounter+1; setOrderCounter(n); localStorage.setItem('tm_order',String(n)); return `ORD-${String(n).padStart(4,'0')}`; };
+  // Order — counter saved in Firebase
+  const nextOrder = async () => {
+    const n = orderCounter + 1;
+    setOrderCounter(n);
+    try { await updateDoc(doc(db,'artifacts',appId,'public','appconfig'), {orderCounter: n}); }
+    catch { try { await setDoc(doc(db,'artifacts',appId,'public','appconfig'), {orderCounter:n}, {merge:true}); } catch{} }
+    return `ORD-${String(n).padStart(4,'0')}`;
+  };
 
   // Stock log
   const logStock = async (productId,productName,delta,reason) => {
@@ -418,15 +438,20 @@ export default function App() {
     window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
   };
 
-  // Config
-  const saveConfig = () => {
+  // Config — saved to Firebase
+  const saveConfigToFirebase = async (cfg, users) => {
+    const ref = doc(db,'artifacts',appId,'public','appconfig');
+    try { await updateDoc(ref, { ...(cfg ? {tallerConfig:cfg} : {}), ...(users ? {tallerUsers:users} : {}) }); }
+    catch { await setDoc(ref, { tallerConfig: cfg || tallerConfig, tallerUsers: users || tallerUsers, orderCounter }, {merge:true}); }
+  };
+  const saveConfig = async () => {
     setTallerConfig(editConfig);
-    localStorage.setItem('tm_config',JSON.stringify(editConfig));
+    await saveConfigToFirebase(editConfig, null);
     setEditConfig(null); showNotif("✓ Configuración guardada");
   };
-  const saveUsers = (users) => {
+  const saveUsers = async (users) => {
     setTallerUsers(users);
-    localStorage.setItem('tm_users',JSON.stringify(users));
+    await saveConfigToFirebase(null, users);
   };
 
   // Print
@@ -542,7 +567,7 @@ export default function App() {
     </div>
   );
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center" style={{background:'#0d1117'}}><Loader2 className="animate-spin text-orange-500" size={40}/></div>;
+  if (loading || !configLoaded) return <div className="min-h-screen flex items-center justify-center" style={{background:'#0d1117'}}><Loader2 className="animate-spin text-orange-500" size={40}/></div>;
 
   // ── MAIN APP ──────────────────────────────────────────────────
   return (
@@ -1170,7 +1195,7 @@ export default function App() {
               <button onClick={()=>{
                 const newEmp={id:Date.now().toString(),nombre:'Nueva Empresa',cuit:'',direccion:'',telefono:'',email:''};
                 const updated={...tallerConfig,empresas:[...(tallerConfig.empresas||[]),newEmp]};
-                setTallerConfig(updated); localStorage.setItem('tm_config',JSON.stringify(updated));
+                setTallerConfig(updated); saveConfigToFirebase(updated, null);
               }} className={`btn-ghost w-full ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}><Plus size={15}/>Agregar empresa</button>
               {editConfig&&(
                 <div className="space-y-3">
@@ -1186,7 +1211,7 @@ export default function App() {
                     <button onClick={()=>setEditConfig(null)} className={`btn-ghost flex-1 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}>Cancelar</button>
                     <button onClick={()=>{
                       const cleaned={...editConfig,empresas:(editConfig.empresas||[]).map(({_editing,...e})=>e)};
-                      setTallerConfig(cleaned); localStorage.setItem('tm_config',JSON.stringify(cleaned)); setEditConfig(null); showNotif("✓ Empresa guardada");
+                      setTallerConfig(cleaned); saveConfigToFirebase(cleaned, null); setEditConfig(null); showNotif("✓ Empresa guardada");
                     }} className="btn-primary flex-1"><Save size={15}/>Guardar</button>
                   </div>
                 </div>

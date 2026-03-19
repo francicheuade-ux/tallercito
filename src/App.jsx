@@ -53,12 +53,41 @@ const DEFAULT_CONFIG = {
 
 const DEFAULT_USERS = [{ id:'1', name:'Francisco', username:'francisco', password:'taller123', role:'admin', color:'#f97316' }];
 
-const EMPTY_REPAIR = { vehicle:'', plate:'', km:'', clientId:'', clientName:'', description:'', partsUsed:[], laborCost:0, status:'pendiente', paymentStatus:'debe', imageUrl:'', notes:'', orderNumber:'' };
+const EMPTY_REPAIR = { vehicle:'', plate:'', km:'', clientId:'', clientName:'', description:'', partsUsed:[], laborCost:0, status:'pendiente', paymentStatus:'debe', imageUrl:'', notes:'', orderNumber:'', payments:[] };
 const EMPTY_BUDGET = { clientId:'', clientName:'', clientPhone:'', vehicle:'', plate:'', km:'', description:'', partsUsed:[], laborCost:0, notes:'', date:new Date().toISOString().split('T')[0], empresaId:'1' };
 const EMPTY_CLIENT = { name:'', phone:'', email:'', vehicles:[] };
 const EMPTY_VEHICLE = { make:'', model:'', year:'', plate:'', km:'', clientId:'', clientName:'' };
-const EMPTY_PRODUCT = { name:'', sku:'', barcode:'', location:'', quantity:0, minStock:1, cost:0, imageUrl:'', description:'', supplier:'', supplierPhone:'' };
+const EMPTY_PRODUCT = { name:'', sku:'', barcode:'', location:'', quantity:0, minStock:1, cost:0, imageUrl:'', description:'', supplier:'', supplierPhone:'', categoryId:'' };
 
+
+function CatSelect({data, setData, categories, dm}) {
+  const [adding, setAdding] = React.useState(false);
+  const [newName, setNewName] = React.useState('');
+  const saveNewCat = async () => {
+    if (!newName.trim()) return;
+    const ref = await addDoc(collection(db,'artifacts',appId,'public','data','categories'), {name:newName.trim(), createdAt:serverTimestamp()});
+    setData(f=>({...f, categoryId:ref.id}));
+    setNewName(''); setAdding(false);
+  };
+  return (
+    <div>
+      <span className="lbl">Categoría</span>
+      <div className="flex gap-2">
+        <select className={`inp flex-1 ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} value={data.categoryId||''} onChange={e=>setData(f=>({...f,categoryId:e.target.value}))}>
+          <option value="">— Sin categoría —</option>
+          {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <button type="button" onClick={()=>setAdding(!adding)} className={`px-3 rounded-xl border-2 font-bold text-orange-500 transition-colors ${dm?'border-[#30363d] hover:bg-[#0d1117]':'border-slate-200 hover:bg-orange-50'}`}><Plus size={16}/></button>
+      </div>
+      {adding&&(
+        <div className="flex gap-2 mt-2">
+          <input autoFocus className={`inp flex-1 text-sm ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="Nombre de la categoría..." value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();saveNewCat();}if(e.key==='Escape')setAdding(false);}}/>
+          <button type="button" onClick={saveNewCat} className="btn-primary" style={{width:'auto',padding:'8px 14px'}}><Check size={14}/></button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ViewToggle({mode, setMode, dm}) {
   return (
@@ -71,8 +100,11 @@ function ViewToggle({mode, setMode, dm}) {
 
 export default function App() {
   // Auth state
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try { const s=localStorage.getItem('tm_session'); return s?JSON.parse(s):null; } catch { return null; }
+  });
   const [loginForm, setLoginForm] = useState({ username:'', password:'' });
+  const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState('');
   const [showPw, setShowPw] = useState(false);
 
@@ -95,7 +127,13 @@ export default function App() {
 
   // UI
   const [view, setView] = useState('dashboard');
-  const [listMode, setListMode] = useState(() => localStorage.getItem('tm_listmode') || 'list'); // 'list' or 'grid'
+  const [listMode, setListMode] = useState(() => localStorage.getItem('tm_listmode') || 'list');
+  const [invFilter, setInvFilter] = useState({ category:'', stock:'', search:'' });
+  const [categories, setCategories] = useState([]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(null); // repair id
+  const [paymentAmount, setPaymentAmount] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [globalSearch, setGlobalSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -158,6 +196,7 @@ export default function App() {
       { name:'budgets', setter:setBudgets },
       { name:'vehicles', setter:setVehicles },
       { name:'stock_history', setter:setStockHistory },
+      { name:'categories', setter:setCategories },
     ];
     const unsubs = cols.map(({name,setter,extra})=>{
       const ref = collection(db,'artifacts',appId,'public','data',name);
@@ -185,10 +224,14 @@ export default function App() {
   // Login — uses users from Firebase
   const handleLogin = () => {
     const u = tallerUsers.find(u=>u.username===loginForm.username&&u.password===loginForm.password);
-    if (u) { setCurrentUser(u); setLoginError(''); }
-    else setLoginError('Usuario o contraseña incorrectos');
+    if (u) {
+      setCurrentUser(u);
+      if (rememberMe) localStorage.setItem('tm_session', JSON.stringify(u));
+      else localStorage.removeItem('tm_session');
+      setLoginError('');
+    } else setLoginError('Usuario o contraseña incorrectos');
   };
-  const handleLogout = () => { setCurrentUser(null); };
+  const handleLogout = () => { setCurrentUser(null); localStorage.removeItem('tm_session'); };
 
   // Camera
   const startCamera = async target => {
@@ -264,6 +307,30 @@ export default function App() {
     try { await updateDoc(doc(db,'artifacts',appId,'public','appconfig'), {orderCounter: n}); }
     catch { try { await setDoc(doc(db,'artifacts',appId,'public','appconfig'), {orderCounter:n}, {merge:true}); } catch{} }
     return `ORD-${String(n).padStart(4,'0')}`;
+  };
+
+  // Categories
+  const saveCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    await addDoc(collection(db,'artifacts',appId,'public','data','categories'), { name:newCategoryName.trim(), createdAt:serverTimestamp() });
+    setNewCategoryName(''); setShowAddCategory(false); showNotif('✓ Categoría creada');
+  };
+  const deleteCategory = async id => {
+    await deleteDoc(doc(db,'artifacts',appId,'public','data','categories',id));
+    showNotif('Categoría eliminada');
+  };
+
+  // Partial payments
+  const addPayment = async (repairId) => {
+    const amount = Number(paymentAmount);
+    if (!amount || amount <= 0) { showNotif('Ingresá un monto válido','error'); return; }
+    const repair = repairs.find(r=>r.id===repairId);
+    if (!repair) return;
+    const payments = [...(repair.payments||[]), { amount, date: new Date().toISOString(), user: currentUser?.name }];
+    const totalPaid = payments.reduce((s,p)=>s+p.amount,0);
+    const newPayStatus = totalPaid >= (repair.totalCost||0) ? 'pagado' : totalPaid > 0 ? 'señado' : 'debe';
+    await updateDoc(doc(db,'artifacts',appId,'public','data','repairs',repairId), { payments, paymentStatus: newPayStatus });
+    setPaymentAmount(''); setShowPaymentModal(null); showNotif('✓ Pago registrado');
   };
 
   // Stock log
@@ -531,6 +598,110 @@ export default function App() {
     win.document.close(); win.print();
   };
 
+  const printWorkOrder = repair => {
+    const win=window.open('','_blank');
+    const totalPaid=(repair.payments||[]).reduce((s,p)=>s+p.amount,0);
+    const remaining=Math.max(0,(repair.totalCost||0)-totalPaid);
+    win.document.write(`<!DOCTYPE html><html><head><title>Orden de Trabajo</title>
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#1e293b;max-width:760px;margin:0 auto}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;margin-bottom:24px;border-bottom:3px solid #f97316}
+    h1{font-size:22px;font-weight:900;color:#0f172a}.sub{font-size:11px;color:#64748b;margin-top:4px;line-height:1.6}
+    .order-num{font-size:28px;font-weight:900;color:#f97316;font-family:monospace}.order-label{font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;text-align:right}
+    .sec{margin:16px 0}.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #f1f5f9}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.item label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px}.item span{font-size:13px;font-weight:700}
+    table{width:100%;border-collapse:collapse;margin-top:8px}thead tr{background:#f97316}th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:white;text-transform:uppercase}
+    td{padding:8px 12px;font-size:12px;border-bottom:1px solid #f1f5f9}
+    .notes-box{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:8px;font-size:12px;margin-top:12px}
+    .payment-box{background:#f0fdf4;border:1px solid #bbf7d0;padding:14px;border-radius:10px;margin-top:12px}
+    .firma{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:40px}
+    .firma-line{border-top:1.5px solid #0f172a;padding-top:8px;font-size:10px;color:#94a3b8;text-align:center;margin-top:48px}
+    </style></head><body>
+    <div class="header">
+      <div><h1>${tallerConfig.nombre}</h1><p class="sub">${tallerConfig.direccion}<br>${tallerConfig.telefono}</p></div>
+      <div style="text-align:right"><div class="order-label">Orden de Trabajo</div><div class="order-num">${repair.orderNumber||'—'}</div><div style="font-size:11px;color:#94a3b8;margin-top:4px">${repair.date?.seconds?new Date(repair.date.seconds*1000).toLocaleDateString('es-AR'):new Date().toLocaleDateString('es-AR')}</div></div>
+    </div>
+    <div class="sec"><div class="sec-title">Vehículo y Cliente</div><div class="grid">
+      <div class="item"><label>Vehículo</label><span>${repair.vehicle||'—'}</span></div>
+      <div class="item"><label>Patente</label><span>${repair.plate||'—'}</span></div>
+      ${repair.km?`<div class="item"><label>Kilometraje</label><span>${Number(repair.km).toLocaleString()} km</span></div>`:''}
+      ${repair.clientName?`<div class="item"><label>Cliente</label><span>${repair.clientName}</span></div>`:''}
+    </div></div>
+    <div class="sec"><div class="sec-title">Trabajo a realizar</div>
+      <p style="font-size:13px;line-height:1.7;margin-top:6px">${repair.description||'—'}</p>
+    </div>
+    ${repair.partsUsed?.length>0?`<div class="sec"><div class="sec-title">Repuestos</div>
+    <table><thead><tr><th>Descripción</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>
+    ${repair.partsUsed.map(p=>`<tr><td>${p.name}</td><td>${p.qty}</td><td>$${Number(p.cost).toLocaleString()}</td><td>$${(p.cost*p.qty).toLocaleString()}</td></tr>`).join('')}
+    </tbody></table></div>`:''}
+    ${repair.notes?`<div class="notes-box">📝 ${repair.notes}</div>`:''}
+    <div class="payment-box">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:700">Total</span><span style="font-size:18px;font-weight:900">$${(repair.totalCost||0).toLocaleString()}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:#64748b">Mano de obra</span><span style="font-size:11px;font-weight:700">$${Number(repair.laborCost||0).toLocaleString()}</span></div>
+      ${totalPaid>0?`<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:#64748b">Pagado</span><span style="font-size:11px;font-weight:700;color:#16a34a">$${totalPaid.toLocaleString()}</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:700">Saldo</span><span style="font-size:11px;font-weight:900;color:#ef4444">$${remaining.toLocaleString()}</span></div>`:''}
+    </div>
+    <div class="firma">
+      <div><div class="firma-line">Firma del cliente</div></div>
+      <div><div class="firma-line">Firma del mecánico</div></div>
+    </div>
+    </body></html>`);
+    win.document.close(); win.print();
+  };
+
+  const printWorkOrder = repair => {
+    const win = window.open('','_blank');
+    const dateStr = repair.date?.seconds ? new Date(repair.date.seconds*1000).toLocaleDateString('es-AR') : new Date().toLocaleDateString('es-AR');
+    const paid = (repair.payments||[]).reduce((s,p)=>s+p.amount,0);
+    const debe = (repair.totalCost||0) - paid;
+    win.document.write(`<!DOCTYPE html><html><head><title>Orden de Trabajo</title>
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#1e293b;max-width:760px;margin:0 auto}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;margin-bottom:20px;border-bottom:3px solid #f97316}
+    .title{font-size:28px;font-weight:900;color:#0f172a}.orden{font-size:14px;font-weight:800;color:#f97316;letter-spacing:2px;text-transform:uppercase}
+    .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px}
+    .sec{margin:16px 0}.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #f1f5f9}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.item label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px}.item span{font-size:14px;font-weight:700}
+    table{width:100%;border-collapse:collapse;margin-top:8px}th{padding:8px 12px;text-align:left;font-size:11px;font-weight:700;background:#0f172a;color:white;text-transform:uppercase}
+    td{padding:9px 12px;font-size:13px;border-bottom:1px solid #f1f5f9}
+    .totals{margin-top:16px;border:2px solid #e2e8f0;border-radius:12px;overflow:hidden}
+    .tot-row{display:flex;justify-content:space-between;padding:10px 16px;font-size:13px;font-weight:600;border-bottom:1px solid #f1f5f9}
+    .tot-row.main{background:#0f172a;color:white;font-size:16px;font-weight:900}
+    .tot-row.debe{background:#fef2f2;color:#dc2626;font-weight:800}
+    .firma{margin-top:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px}
+    .firma-box{border-top:2px solid #e2e8f0;padding-top:10px;text-align:center;font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase}
+    .notas{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:10px;font-size:13px;color:#92400e;margin-top:12px}
+    </style></head><body>
+    <div class="header">
+      <div><div class="title">${tallerConfig.nombre}</div><p style="font-size:12px;color:#64748b;margin-top:4px">${tallerConfig.direccion} · ${tallerConfig.telefono}</p></div>
+      <div style="text-align:right"><div class="orden">Orden de Trabajo</div><div style="font-size:22px;font-weight:900;color:#0f172a">${repair.orderNumber||'—'}</div><div style="font-size:11px;color:#94a3b8">${dateStr}</div></div>
+    </div>
+    <div class="sec"><div class="sec-title">Vehículo</div><div class="grid2">
+      <div class="item"><label>Vehículo</label><span>${repair.vehicle||'—'}</span></div>
+      <div class="item"><label>Patente</label><span>${repair.plate||'—'}</span></div>
+      ${repair.km?`<div class="item"><label>Kilometraje</label><span>${Number(repair.km).toLocaleString()} km</span></div>`:''}
+      ${repair.clientName?`<div class="item"><label>Cliente</label><span>${repair.clientName}</span></div>`:''}
+    </div></div>
+    <div class="sec"><div class="sec-title">Trabajo a realizar</div>
+      <p style="font-size:14px;line-height:1.8;margin-top:6px">${repair.description||'—'}</p>
+    </div>
+    ${repair.partsUsed?.length?`<div class="sec"><div class="sec-title">Repuestos utilizados</div>
+    <table><thead><tr><th>Repuesto</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>
+    ${repair.partsUsed.map(p=>`<tr><td>${p.name}</td><td>${p.qty}</td><td>$${Number(p.cost).toLocaleString()}</td><td>$${(p.cost*p.qty).toLocaleString()}</td></tr>`).join('')}
+    </tbody></table></div>`:''}
+    <div class="totals">
+      ${repair.laborCost>0?`<div class="tot-row"><span>Mano de obra</span><span>$${Number(repair.laborCost||0).toLocaleString()}</span></div>`:''}
+      ${(repair.partsCost||0)>0?`<div class="tot-row"><span>Repuestos</span><span>$${Number(repair.partsCost||0).toLocaleString()}</span></div>`:''}
+      <div class="tot-row main"><span>TOTAL</span><span>$${Number(repair.totalCost||0).toLocaleString()}</span></div>
+      ${paid>0?`<div class="tot-row" style="background:#f0fdf4;color:#16a34a"><span>Pagado</span><span>$${paid.toLocaleString()}</span></div>`:''}
+      ${debe>0?`<div class="tot-row debe"><span>Saldo pendiente</span><span>$${debe.toLocaleString()}</span></div>`:''}
+    </div>
+    ${repair.notes?`<div class="notas">📝 ${repair.notes}</div>`:''}
+    <div class="firma">
+      <div class="firma-box">Firma del cliente</div>
+      <div class="firma-box">Firma del mecánico</div>
+    </div>
+    </body></html>`);
+    win.document.close(); win.print();
+  };
+
   const printQRLabel = product => {
     const win=window.open('','_blank');
     win.document.write(`<!DOCTYPE html><html><head><title>QR</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh}.label{width:6cm;padding:8px;border:1.5px solid #000;display:flex;flex-direction:column;align-items:center;gap:4px;font-family:Arial}.name{font-size:8px;font-weight:900;text-align:center;text-transform:uppercase}.sku{font-size:6px;color:#666;font-family:monospace}.loc{font-size:6px;color:#999}</style></head><body>
@@ -592,6 +763,12 @@ export default function App() {
             </div>
           </div>
           {loginError&&<p className="text-red-400 text-sm font-bold text-center">{loginError}</p>}
+          <div className="flex items-center gap-3 cursor-pointer" onClick={()=>setRememberMe(!rememberMe)}>
+            <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all" style={{background:rememberMe?'linear-gradient(135deg,#f97316,#ea580c)':'rgba(255,255,255,0.07)',border:rememberMe?'none':'1.5px solid rgba(255,255,255,0.15)'}}>
+              {rememberMe&&<Check size={12} className="text-white"/>}
+            </div>
+            <span className="text-slate-300 text-sm select-none">Recordarme en este dispositivo</span>
+          </div>
           <button onClick={handleLogin} className="w-full py-3.5 rounded-2xl font-bold text-white transition-all hover:-translate-y-0.5" style={{background:'linear-gradient(135deg,#f97316,#ea580c)',boxShadow:'0 4px 16px rgba(249,115,22,0.4)'}}>Ingresar</button>
           <p className="text-slate-600 text-xs text-center">Usuario demo: <span className="text-slate-400 font-bold">francisco</span> / <span className="text-slate-400 font-bold">taller123</span></p>
         </div>
@@ -733,6 +910,41 @@ export default function App() {
             </div>}
             {qrAction==='deduct'&&<div className="space-y-3"><p className="text-sm font-bold">Restar <span className="text-red-500">{qrQty}</span> unidad(es)</p><div className="flex gap-2"><button onClick={()=>setQrAction(null)} className={`btn-ghost flex-1 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}>Volver</button><button onClick={handleQRDeduct} className="btn-primary flex-1" style={{background:'linear-gradient(135deg,#ef4444,#dc2626)'}}><Check size={16}/>Confirmar</button></div></div>}
             {qrAction==='service'&&<div className="space-y-3"><span className="lbl">Servicio activo</span><select className={`inp ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} value={selectedRepairForQR} onChange={e=>setSelectedRepairForQR(e.target.value)}><option value="">— Elegí —</option>{repairs.filter(r=>r.status!=='entregado').map(r=><option key={r.id} value={r.id}>{r.vehicle} {r.plate&&`· ${r.plate}`}</option>)}</select><div className="flex gap-2"><button onClick={()=>setQrAction(null)} className={`btn-ghost flex-1 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}>Volver</button><button onClick={handleQRAddToService} disabled={!selectedRepairForQR} className="btn-primary flex-1"><Check size={16}/>Agregar</button></div></div>}
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT MODAL */}
+      {showPaymentModal&&(
+        <div className="modal-center" onClick={()=>setShowPaymentModal(null)}>
+          <div className={`${dm?'bg-[#161b22]':'bg-white'} rounded-3xl p-7 max-w-sm w-full`} onClick={e=>e.stopPropagation()}>
+            <h3 className={`font-display font-black text-xl mb-1 ${dm?'text-white':'text-slate-900'}`}>Registrar pago</h3>
+            {(()=>{const rep=repairs.find(r=>r.id===showPaymentModal);if(!rep)return null;
+              const totalPaid=(rep.payments||[]).reduce((s,p)=>s+p.amount,0);
+              const remaining=Math.max(0,(rep.totalCost||0)-totalPaid);
+              return(<>
+                <div className={`rounded-2xl p-4 mb-4 space-y-1 ${dm?'bg-[#0d1117]':'bg-slate-50'}`}>
+                  <div className="flex justify-between text-sm"><span className={dm?'text-slate-400':'text-slate-500'}>Total</span><span className="font-bold">${(rep.totalCost||0).toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm"><span className={dm?'text-slate-400':'text-slate-500'}>Pagado</span><span className="font-bold text-emerald-500">${totalPaid.toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm font-black"><span className={dm?'text-slate-300':'text-slate-700'}>Resta</span><span className="text-red-500">${remaining.toLocaleString()}</span></div>
+                </div>
+                {(rep.payments||[]).length>0&&<div className="mb-4 space-y-1">
+                  {rep.payments.map((p,i)=><div key={i} className={`flex justify-between text-xs rounded-xl px-3 py-2 ${dm?'bg-[#0d1117]':'bg-slate-50'}`}>
+                    <span className={dm?'text-slate-400':'text-slate-500'}>{new Date(p.date).toLocaleDateString('es-AR')} · {p.user}</span>
+                    <span className="font-bold text-emerald-500">+${p.amount.toLocaleString()}</span>
+                  </div>)}
+                </div>}
+                <div className="space-y-3">
+                  <div><span className="lbl">Nuevo pago $</span>
+                    <input type="number" min="1" className={`inp ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="0" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addPayment(showPaymentModal)}/>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={()=>setShowPaymentModal(null)} className={`btn-ghost flex-1 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}>Cancelar</button>
+                    <button onClick={()=>addPayment(showPaymentModal)} className="btn-primary flex-1"><DollarSign size={15}/>Registrar</button>
+                  </div>
+                </div>
+              </>);
+            })()}
           </div>
         </div>
       )}
@@ -921,13 +1133,35 @@ export default function App() {
             <div className="flex gap-3 justify-between items-center">
               <h2 className="page-title font-display">Inventario</h2>
               <div className="flex gap-2 items-center">
-                <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/><input className={`inp pl-9 text-sm ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} style={{width:'140px'}} placeholder="Buscar..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/></div>
                 <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
               </div>
             </div>
+            {/* FILTER BAR */}
+            <div className="flex gap-2 flex-wrap items-center">
+              <div className="relative flex-1 min-w-[140px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13}/>
+                <input className={`inp pl-9 text-sm ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="Buscar..." value={invFilter.search} onChange={e=>setInvFilter(f=>({...f,search:e.target.value}))}/>
+              </div>
+              <select className={`inp text-sm flex-shrink-0 ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} style={{width:'auto'}} value={invFilter.category} onChange={e=>setInvFilter(f=>({...f,category:e.target.value}))}>
+                <option value="">Todas las categorías</option>
+                {categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <select className={`inp text-sm flex-shrink-0 ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} style={{width:'auto'}} value={invFilter.stock} onChange={e=>setInvFilter(f=>({...f,stock:e.target.value}))}>
+                <option value="">Todo el stock</option>
+                <option value="low">Stock bajo</option>
+                <option value="ok">Stock normal</option>
+                <option value="zero">Sin stock</option>
+              </select>
+              {(invFilter.search||invFilter.category||invFilter.stock)&&<button onClick={()=>setInvFilter({category:'',stock:'',search:''})} className="text-xs font-bold text-orange-500 px-3 py-2 rounded-xl hover:bg-orange-50 transition-colors">✕ Limpiar</button>}
+            </div>
             {listMode==='list'?(
               <div className="space-y-2">
-                {inventory.filter(p=>p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item=>(
+                {inventory.filter(p=>{
+                const matchSearch = !invFilter.search || p.name.toLowerCase().includes(invFilter.search.toLowerCase());
+                const matchCat = !invFilter.category || p.categoryId===invFilter.category;
+                const matchStock = !invFilter.stock || (invFilter.stock==='low'&&p.quantity>0&&p.quantity<=p.minStock) || (invFilter.stock==='ok'&&p.quantity>p.minStock) || (invFilter.stock==='zero'&&p.quantity===0);
+                return matchSearch&&matchCat&&matchStock;
+              }).map(item=>(
                   <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer flex items-center gap-4 p-3.5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
                     {item.imageUrl?<img src={item.imageUrl} alt={item.name} className="inv-thumb"/>:<div className={`inv-thumb-placeholder ${dm?'bg-[#0d1117]':'bg-slate-100'}`}><Package size={20} className={dm?'text-slate-600':'text-slate-300'}/></div>}
                     <div className="flex-1 min-w-0">
@@ -936,6 +1170,7 @@ export default function App() {
                         {item.quantity<=item.minStock&&<span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500"/>}
                       </div>
                       <div className={`flex items-center gap-3 mt-0.5 text-xs ${dm?'text-slate-500':'text-slate-400'}`}>
+                        {item.categoryId&&categories.find(c=>c.id===item.categoryId)&&<span className="px-1.5 py-0.5 rounded-md font-bold text-orange-500" style={{background:'rgba(249,115,22,0.1)',fontSize:'10px'}}>{categories.find(c=>c.id===item.categoryId).name}</span>}
                         {item.location&&<span className="flex items-center gap-1"><MapPin size={9}/>{item.location}</span>}
                         {item.supplier&&<span>🏪 {item.supplier}</span>}
                       </div>
@@ -954,7 +1189,12 @@ export default function App() {
               </div>
             ):(
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {inventory.filter(p=>p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item=>(
+                {inventory.filter(p=>{
+                const matchSearch = !invFilter.search || p.name.toLowerCase().includes(invFilter.search.toLowerCase());
+                const matchCat = !invFilter.category || p.categoryId===invFilter.category;
+                const matchStock = !invFilter.stock || (invFilter.stock==='low'&&p.quantity>0&&p.quantity<=p.minStock) || (invFilter.stock==='ok'&&p.quantity>p.minStock) || (invFilter.stock==='zero'&&p.quantity===0);
+                return matchSearch&&matchCat&&matchStock;
+              }).map(item=>(
                   <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer overflow-hidden ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
                     {item.imageUrl
                       ?<img src={item.imageUrl} alt={item.name} className="w-full h-28 object-cover" style={{borderRadius:'18px 18px 0 0'}}/>
@@ -965,6 +1205,7 @@ export default function App() {
                         <h3 className={`font-bold text-xs leading-tight ${dm?'text-white':'text-slate-900'}`}>{item.name}</h3>
                         {item.quantity<=item.minStock&&<span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-0.5"/>}
                       </div>
+                      {item.categoryId&&categories.find(c=>c.id===item.categoryId)&&<p className="text-[10px] font-bold text-orange-500 mb-0.5">{categories.find(c=>c.id===item.categoryId).name}</p>}
                       <p className={`font-black font-display text-sm ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
                     </div>
@@ -1057,6 +1298,7 @@ export default function App() {
                   </div>
                   <div className="text-right ml-3">
                     <p className="font-black text-emerald-500 text-xl font-display">${rep.totalCost?.toLocaleString()}</p>
+                    {(rep.payments||[]).length>0&&(()=>{const paid=(rep.payments||[]).reduce((s,p)=>s+p.amount,0);return<p className="text-xs font-bold text-orange-400">Pagó ${paid.toLocaleString()}</p>;})()}
                     {rep.laborCost>0&&<p className="text-xs text-slate-400">MO: ${Number(rep.laborCost).toLocaleString()}</p>}
                   </div>
                 </div>
@@ -1065,12 +1307,14 @@ export default function App() {
                 {rep.partsUsed?.length>0&&<div className="flex flex-wrap gap-1 mb-3">{rep.partsUsed.map((p,i)=><span key={i} className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${dm?'bg-[#0d1117] text-slate-400':'bg-slate-100 text-slate-600'}`}>{p.qty}x {p.name}</span>)}</div>}
                 <div className={`flex items-center justify-between pt-3 border-t flex-wrap gap-2 ${dm?'border-[#30363d]':'border-slate-50'}`}>
                   <div className="flex gap-1 flex-wrap">
-                    {Object.keys(STATUS_CONFIG).map(s=><button key={s} onClick={()=>updateRepairField(rep.id,'status',s)} className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all ${(rep.status||'pendiente')===s?'bg-slate-800 text-white':dm?'bg-[#0d1117] text-slate-500':'bg-slate-100 text-slate-500'}`}>{STATUS_CONFIG[s].icon}</button>)}
+                    {Object.keys(STATUS_CONFIG).map(s=><button key={s} onClick={()=>updateRepairField(rep.id,'status',s)} className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all ${(rep.status||'pendiente')===s?'bg-orange-500 text-white':dm?'bg-[#21262d] text-slate-400 hover:text-slate-200':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{STATUS_CONFIG[s].icon} {STATUS_CONFIG[s].label}</button>)}
                     {Object.entries(PAYMENT_CONFIG).map(([key,cfg])=><button key={key} onClick={()=>updateRepairField(rep.id,'paymentStatus',key)} className="text-[10px] font-bold px-2 py-1.5 rounded-lg transition-all" style={{background:(rep.paymentStatus||'debe')===key?cfg.bg:'transparent',color:cfg.color,border:`1px solid ${(rep.paymentStatus||'debe')===key?cfg.color:'rgba(100,116,139,0.25)'}`}}>{cfg.icon}</button>)}
                   </div>
                   <div className="flex gap-1.5 flex-wrap">
-                    <button onClick={()=>{setEditingRepair({...rep});setClientSearch(rep.clientName||'');setView('edit_repair');}} className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl ${dm?'bg-[#0d1117] text-slate-400':'bg-slate-100 text-slate-600'}`}><Edit3 size={11}/>Editar</button>
+                    <button onClick={()=>{setEditingRepair({...rep});setClientSearch(rep.clientName||'');setView('edit_repair');}} className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl ${dm?'bg-[#21262d] text-slate-300 hover:text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}><Edit3 size={11}/>Editar</button>
+                    <button onClick={()=>{setShowPaymentModal(rep.id);setPaymentAmount('');}} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500"><DollarSign size={11}/>Pago</button>
                     {(rep.status==='listo'||rep.status==='entregado')&&<button onClick={()=>openConvertToBudget(rep)} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-blue-500/10 text-blue-400"><FileText size={11}/>Pres.</button>}
+                    <button onClick={()=>printWorkOrder(rep)} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-slate-500/10 text-slate-400"><Printer size={11}/>OT</button>
                     <button onClick={()=>deleteItem('repairs',rep.id,`${rep.vehicle}`)} className="p-1.5 text-red-400 rounded-xl"><Trash2 size={12}/></button>
                   </div>
                 </div>
@@ -1423,6 +1667,47 @@ export default function App() {
               )}
             </div>
 
+            {/* Categorías de inventario */}
+            <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+              <p className="font-bold text-sm flex items-center gap-2"><Box size={15} className="text-orange-500"/>Categorías de inventario</p>
+              <div className="space-y-2">
+                {categories.map(cat=>(
+                  <div key={cat.id} className={`flex items-center justify-between rounded-xl px-4 py-3 ${dm?'bg-[#0d1117]':'bg-slate-50'}`}>
+                    <span className={`font-bold text-sm ${dm?'text-white':'text-slate-800'}`}>{cat.name}</span>
+                    <button onClick={()=>deleteCategory(cat.id)} className="text-red-400 hover:text-red-500 p-1"><Trash2 size={14}/></button>
+                  </div>
+                ))}
+                {categories.length===0&&<p className={`text-sm text-center py-2 ${dm?'text-slate-500':'text-slate-400'}`}>Sin categorías todavía</p>}
+              </div>
+              {showAddCategory?(
+                <div className="flex gap-2">
+                  <input autoFocus className={`inp flex-1 ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="Nombre de categoría..." value={newCategoryName} onChange={e=>setNewCategoryName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveCategory()}/>
+                  <button onClick={saveCategory} className="btn-primary" style={{width:'auto',padding:'10px 16px'}}><Check size={15}/></button>
+                  <button onClick={()=>{setShowAddCategory(false);setNewCategoryName('');}} className={`btn-ghost ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`} style={{width:'auto',padding:'10px 14px'}}><X size={15}/></button>
+                </div>
+              ):(
+                <button onClick={()=>setShowAddCategory(true)} className={`btn-ghost w-full ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}><Plus size={15}/>Nueva categoría</button>
+              )}
+            </div>
+
+            {/* Categorías */}
+            <div className={`card card-s p-6 space-y-3 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+              <p className="font-bold text-sm flex items-center gap-2"><Package size={15} className="text-orange-500"/>Categorías de inventario</p>
+              <div className="flex flex-wrap gap-2">
+                {categories.map(cat=>(
+                  <div key={cat.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${dm?'bg-[#0d1117] border-[#30363d]':'bg-slate-50 border-slate-200'}`}>
+                    <span className={`text-sm font-bold ${dm?'text-white':'text-slate-800'}`}>{cat.name}</span>
+                    <button onClick={()=>deleteDoc(doc(db,'artifacts',appId,'public','data','categories',cat.id))} className="text-red-400 hover:text-red-500"><X size={12}/></button>
+                  </div>
+                ))}
+                {categories.length===0&&<p className={`text-sm ${dm?'text-slate-500':'text-slate-400'}`}>No hay categorías todavía</p>}
+              </div>
+              <div className="flex gap-2">
+                <input className={`inp flex-1 text-sm ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="Nueva categoría..." value={newCategoryName} onChange={e=>setNewCategoryName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&newCategoryName.trim()&&addDoc(collection(db,'artifacts',appId,'public','data','categories'),{name:newCategoryName.trim(),createdAt:serverTimestamp()}).then(()=>setNewCategoryName(''))}/>
+                <button onClick={()=>newCategoryName.trim()&&addDoc(collection(db,'artifacts',appId,'public','data','categories'),{name:newCategoryName.trim(),createdAt:serverTimestamp()}).then(()=>setNewCategoryName(''))} className="btn-primary" style={{width:'auto',padding:'10px 16px'}}><Plus size={15}/></button>
+              </div>
+            </div>
+
             {/* Dark mode */}
             <div className={`card card-s p-5 flex justify-between items-center ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
               <div><p className="font-bold">Tema oscuro</p><p className={`text-xs ${dm?'text-slate-400':'text-slate-500'}`}>Apariencia de la app</p></div>
@@ -1464,7 +1749,7 @@ export default function App() {
           <BudForm isEdit={view==='edit_budget'} data={view==='edit_budget'?editingBudget:newBudget} setData={view==='edit_budget'?setEditingBudget:setNewBudget} onSubmit={view==='edit_budget'?updateBudget:saveBudget} onCancel={()=>{setView('budgets');setClientSearchB('');setEditingBudget(null);}} clients={clients} getCV={getClientVehicles} cs={clientSearchB} setCs={setClientSearchB} showDD={showClientDDB} setShowDD={setShowClientDDB} onSC={c=>selectClient(c,view==='edit_budget'?'editBudget':'budget')} onSV={v=>selectVehicle(v,view==='edit_budget'?setEditingBudget:setNewBudget)} inventory={inventory} dm={dm} empresas={tallerConfig.empresas||[]} prefilled={view==='add_budget'&&!!newBudget.vehicle}/>
         )}
         {(view==='add'||view==='edit_product')&&(
-          <ProdForm isEdit={view==='edit_product'} data={view==='edit_product'?editingProduct:newProduct} setData={view==='edit_product'?setEditingProduct:setNewProduct} onSubmit={view==='edit_product'?updateProduct:saveProduct} onCancel={()=>setView('list')} dm={dm} sc={t=>startCamera(view==='edit_product'?'editProduct':t)}/>
+          <ProdForm isEdit={view==='edit_product'} data={view==='edit_product'?editingProduct:newProduct} setData={view==='edit_product'?setEditingProduct:setNewProduct} onSubmit={view==='edit_product'?updateProduct:saveProduct} onCancel={()=>setView('list')} dm={dm} sc={t=>startCamera(view==='edit_product'?'editProduct':t)} cats={categories}/>
         )}
         {(view==='add_client'||view==='edit_client')&&(
           <ClForm isEdit={view==='edit_client'} data={view==='edit_client'?editingClient:newClient} setData={view==='edit_client'?setEditingClient:setNewClient} onSubmit={view==='edit_client'?updateClient:saveClient} onCancel={()=>{setView('clients');setEditingClient(null);}} tv={tempVehicle} setTv={setTempVehicle} dm={dm}/>
@@ -1584,8 +1869,7 @@ function PSel({inventory,parts,onChange,dm}){
 function TBox({parts,laborCost,color='green'}){
   const t=(parts||[]).reduce((s,p)=>s+(p.cost*p.qty),0)+Number(laborCost||0);
   if(t<=0) return null;
-  const s=color==='green'?{bg:'#f0fdf4',border:'#bbf7d0',color:'#166534'}:{bg:'#eff6ff',border:'#bfdbfe',color:'#1d4ed8'};
-  return<div className="rounded-2xl p-4 text-sm font-bold" style={{background:s.bg,border:`1px solid ${s.border}`,color:s.color}}>💰 Total: ${t.toLocaleString()}</div>;
+  return<div className="rounded-2xl p-4 text-sm font-bold" style={{background:color==='green'?'rgba(16,185,129,0.12)':'rgba(59,130,246,0.12)',border:`1px solid ${color==='green'?'rgba(16,185,129,0.25)':'rgba(59,130,246,0.25)'}`,color:color==='green'?'#10b981':'#3b82f6'}}>💰 Total: ${t.toLocaleString()}</div>;
 }
 
 function RepForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,showDD,setShowDD,onSC,onSV,inventory,dm,sc}){
@@ -1638,13 +1922,20 @@ function BudForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,s
   </FCard>;
 }
 
-function ProdForm({isEdit,data,setData,onSubmit,onCancel,dm,sc}){
+function ProdForm({isEdit,data,setData,onSubmit,onCancel,dm,sc,cats=[]}){
   if(!data) return null;
   return<FCard onSubmit={onSubmit} title={isEdit?'Editar Repuesto':'Nuevo Repuesto'} onCancel={onCancel} dm={dm}>
     <FInp label="Nombre *" required placeholder="Filtro de aceite" value={data.name||''} onChange={e=>setData(f=>({...f,name:e.target.value}))} dm={dm}/>
     <FInp label="Descripción" placeholder="Marca, modelo..." value={data.description||''} onChange={e=>setData(f=>({...f,description:e.target.value}))} dm={dm}/>
     {data.barcode&&<div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{background:'rgba(249,115,22,0.1)',border:'1px solid rgba(249,115,22,0.2)'}}><QrCode size={14} className="text-orange-500"/><span className="text-xs font-bold text-orange-500">Código: </span><span className="font-mono text-xs">{data.barcode}</span></div>}
+    <CatSelect data={data} setData={setData} categories={categories} dm={dm}/>
     <FInp label="Ubicación" placeholder="Estante A, Cajón 2" value={data.location||''} onChange={e=>setData(f=>({...f,location:e.target.value}))} dm={dm}/>
+    <div><span className="lbl">Categoría</span>
+      <select className={`inp ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} value={data.categoryId||''} onChange={e=>setData(f=>({...f,categoryId:e.target.value}))}>
+        <option value="">Sin categoría</option>
+        {cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+    </div>
     <div className="grid grid-cols-2 gap-3">
       <FInp label="Proveedor" placeholder="Dist. X" value={data.supplier||''} onChange={e=>setData(f=>({...f,supplier:e.target.value}))} dm={dm}/>
       <FInp label="Tel. proveedor" placeholder="11-xxxx" value={data.supplierPhone||''} onChange={e=>setData(f=>({...f,supplierPhone:e.target.value}))} dm={dm}/>

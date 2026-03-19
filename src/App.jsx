@@ -12,7 +12,7 @@ import {
   Clock, TrendingUp, BarChart3, RefreshCw, QrCode, Edit3, Package,
   MessageCircle, Settings, Moon, Sun, History, AlertTriangle,
   CreditCard, Award, LogOut, User, Lock, Eye, EyeOff, Building2,
-  ChevronDown, Shield
+  ChevronDown, Shield, LayoutList, LayoutGrid
 } from 'lucide-react';
 
 const firebaseConfig = {
@@ -59,6 +59,16 @@ const EMPTY_CLIENT = { name:'', phone:'', email:'', vehicles:[] };
 const EMPTY_VEHICLE = { make:'', model:'', year:'', plate:'', km:'', clientId:'', clientName:'' };
 const EMPTY_PRODUCT = { name:'', sku:'', barcode:'', location:'', quantity:0, minStock:1, cost:0, imageUrl:'', description:'', supplier:'', supplierPhone:'' };
 
+
+function ViewToggle({mode, setMode, dm}) {
+  return (
+    <div className={`flex rounded-xl overflow-hidden border ${dm?'border-[#30363d]':'border-slate-200'}`}>
+      <button onClick={()=>{setMode('list');localStorage.setItem('tm_listmode','list');}} className={`p-2 transition-colors ${mode==='list'?(dm?'bg-[#30363d] text-white':'bg-slate-200 text-slate-800'):(dm?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600')}`}><LayoutList size={16}/></button>
+      <button onClick={()=>{setMode('grid');localStorage.setItem('tm_listmode','grid');}} className={`p-2 transition-colors ${mode==='grid'?(dm?'bg-[#30363d] text-white':'bg-slate-200 text-slate-800'):(dm?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600')}`}><LayoutGrid size={16}/></button>
+    </div>
+  );
+}
+
 export default function App() {
   // Auth state
   const [currentUser, setCurrentUser] = useState(null);
@@ -85,6 +95,7 @@ export default function App() {
 
   // UI
   const [view, setView] = useState('dashboard');
+  const [listMode, setListMode] = useState(() => localStorage.getItem('tm_listmode') || 'list'); // 'list' or 'grid'
   const [searchTerm, setSearchTerm] = useState('');
   const [globalSearch, setGlobalSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -766,6 +777,23 @@ export default function App() {
         ))}
       </div>
 
+      {/* CONTEXTUAL FAB — shows + button per section */}
+      {['list','repairs','budgets','clients','vehicles_list'].includes(view)&&(
+        <button
+          onClick={()=>{
+            if(view==='list') setView('add');
+            else if(view==='repairs'){setNewRepair(EMPTY_REPAIR);setClientSearch('');setView('add_repair');}
+            else if(view==='budgets'){setNewBudget(EMPTY_BUDGET);setClientSearchB('');setView('add_budget');}
+            else if(view==='clients') setView('add_client');
+            else if(view==='vehicles_list') setView('add_vehicle');
+          }}
+          className="fixed bottom-28 right-5 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95"
+          style={{background:'linear-gradient(135deg,#ff6b1a,#e85510)',boxShadow:'0 8px 28px rgba(249,115,22,0.55),0 0 0 4px rgba(249,115,22,0.15)'}}
+        >
+          <Plus size={26} className="text-white"/>
+        </button>
+      )}
+
       {/* NOTIFICATION */}
       {notification&&(
         <div className={`fixed top-4 right-4 ${notification.type==='error'?'bg-red-600':'bg-slate-900'} text-white px-5 py-3 rounded-2xl shadow-2xl z-[400] flex items-center gap-3 anim`}>
@@ -872,45 +900,59 @@ export default function App() {
           <div className="space-y-4 anim">
             <div className="flex gap-3 justify-between items-center">
               <h2 className="page-title font-display">Inventario</h2>
-              <div className="flex gap-2">
-                <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/><input className={`inp pl-9 text-sm ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} style={{width:'160px'}} placeholder="Buscar..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/></div>
-                <button onClick={()=>setView('add')} className="btn-primary" style={{width:'auto',padding:'10px 14px'}}><Plus size={15}/></button>
-                <DangerBtn onClick={()=>deleteAll('inventory')}/>
+              <div className="flex gap-2 items-center">
+                <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/><input className={`inp pl-9 text-sm ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} style={{width:'140px'}} placeholder="Buscar..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/></div>
+                <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
               </div>
             </div>
-            <div className="space-y-2">
-              {inventory.filter(p=>p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item=>(
-                <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer flex items-center gap-4 p-3.5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-                  {/* Thumbnail */}
-                  {item.imageUrl
-                    ? <img src={item.imageUrl} alt={item.name} className="inv-thumb"/>
-                    : <div className={`inv-thumb-placeholder ${dm?'bg-[#0d1117]':'bg-slate-100'}`}><Package size={20} className={dm?'text-slate-600':'text-slate-300'}/></div>
-                  }
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{item.name}</h3>
-                      {item.quantity<=item.minStock&&<span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500"/>}
+            {listMode==='list'?(
+              <div className="space-y-2">
+                {inventory.filter(p=>p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item=>(
+                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer flex items-center gap-4 p-3.5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+                    {item.imageUrl?<img src={item.imageUrl} alt={item.name} className="inv-thumb"/>:<div className={`inv-thumb-placeholder ${dm?'bg-[#0d1117]':'bg-slate-100'}`}><Package size={20} className={dm?'text-slate-600':'text-slate-300'}/></div>}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{item.name}</h3>
+                        {item.quantity<=item.minStock&&<span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500"/>}
+                      </div>
+                      <div className={`flex items-center gap-3 mt-0.5 text-xs ${dm?'text-slate-500':'text-slate-400'}`}>
+                        {item.location&&<span className="flex items-center gap-1"><MapPin size={9}/>{item.location}</span>}
+                        {item.supplier&&<span>🏪 {item.supplier}</span>}
+                      </div>
                     </div>
-                    <div className={`flex items-center gap-3 mt-0.5 text-xs ${dm?'text-slate-500':'text-slate-400'}`}>
-                      {item.location&&<span className="flex items-center gap-1"><MapPin size={9}/>{item.location}</span>}
-                      {item.supplier&&<span>🏪 {item.supplier}</span>}
+                    <div className="text-right flex-shrink-0">
+                      <p className={`font-black font-display text-base ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0" onClick={e=>e.stopPropagation()}>
+                      <button onClick={()=>{setEditingProduct({...item});setView('edit_product');}} className={`p-2 rounded-xl transition-colors ${dm?'hover:bg-[#0d1117] text-slate-400':'hover:bg-slate-100 text-slate-500'}`}><Edit3 size={14}/></button>
+                      <button onClick={()=>deleteItem('inventory',item.id,item.name)} className="p-2 rounded-xl text-red-400 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button>
                     </div>
                   </div>
-                  {/* Right side */}
-                  <div className="text-right flex-shrink-0">
-                    <p className={`font-black font-display text-base ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
+                ))}
+                {inventory.length===0&&<EC icon={<Package size={36}/>} text="Sin repuestos" dm={dm}/>}
+              </div>
+            ):(
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {inventory.filter(p=>p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item=>(
+                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer overflow-hidden ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+                    {item.imageUrl
+                      ?<img src={item.imageUrl} alt={item.name} className="w-full h-28 object-cover" style={{borderRadius:'18px 18px 0 0'}}/>
+                      :<div className={`w-full h-20 flex items-center justify-center ${dm?'bg-[#0d1117]':'bg-slate-50'}`} style={{borderRadius:'18px 18px 0 0'}}><Package size={24} className="opacity-20"/></div>
+                    }
+                    <div className="p-3">
+                      <div className="flex justify-between items-start gap-1 mb-1">
+                        <h3 className={`font-bold text-xs leading-tight ${dm?'text-white':'text-slate-900'}`}>{item.name}</h3>
+                        {item.quantity<=item.minStock&&<span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-0.5"/>}
+                      </div>
+                      <p className={`font-black font-display text-sm ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
+                    </div>
                   </div>
-                  {/* Actions */}
-                  <div className="flex gap-1 flex-shrink-0" onClick={e=>e.stopPropagation()}>
-                    <button onClick={()=>{setEditingProduct({...item});setView('edit_product');}} className={`p-2 rounded-xl transition-colors ${dm?'hover:bg-[#0d1117] text-slate-400':'hover:bg-slate-100 text-slate-500'}`}><Edit3 size={14}/></button>
-                    <button onClick={()=>deleteItem('inventory',item.id,item.name)} className="p-2 rounded-xl text-red-400 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button>
-                  </div>
-                </div>
-              ))}
-              {inventory.length===0&&<EC icon={<Package size={36}/>} text="Sin repuestos" dm={dm}/>}
-            </div>
+                ))}
+                {inventory.length===0&&<EC icon={<Package size={36}/>} text="Sin repuestos" dm={dm} className="col-span-2"/>}
+              </div>
+            )}
           </div>
         )}
 
@@ -950,16 +992,30 @@ export default function App() {
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
               <h2 className="page-title font-display">Servicios</h2>
-              <div className="flex gap-2">
-                <button onClick={()=>setView('add_repair')} className="btn-primary" style={{width:'auto',padding:'10px 16px',fontSize:'13px'}}><Plus size={15}/>Nuevo</button>
-                <DangerBtn onClick={()=>deleteAll('repairs')}/>
-              </div>
+              <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
             <div className="flex gap-2 flex-wrap">
               {Object.entries(STATUS_CONFIG).map(([key,cfg])=>(
                 <span key={key} className={`status-pill ${cfg.tw}`}><span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}/>{cfg.icon} {cfg.label} ({repairs.filter(r=>(r.status||'pendiente')===key).length})</span>
               ))}
             </div>
+            {listMode==='grid'&&(
+              <div className="grid grid-cols-2 gap-3">
+                {repairs.sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
+                  <div key={rep.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      {rep.orderNumber&&<span className="text-[10px] font-bold text-orange-500 font-mono">{rep.orderNumber}</span>}
+                      <SPill status={rep.status||'pendiente'}/>
+                    </div>
+                    <h4 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle}</h4>
+                    {rep.plate&&<span className={`font-mono text-xs ${dm?'text-slate-400':'text-slate-500'}`}>{rep.plate}</span>}
+                    {rep.clientName&&<p className="text-xs text-slate-400 mt-0.5">{rep.clientName}</p>}
+                    <p className="font-black text-emerald-500 font-display mt-1">${rep.totalCost?.toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {listMode==='list'&&(
             {repairs.sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
               <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                 {rep.imageUrl&&<img src={rep.imageUrl} alt="" className="w-full h-36 object-cover rounded-2xl mb-4"/>}
@@ -1000,6 +1056,7 @@ export default function App() {
               </div>
             ))}
             {repairs.length===0&&<EC icon={<Car size={36}/>} text="No hay servicios" dm={dm}/>}
+            )}
           </div>
         )}
 
@@ -1008,12 +1065,24 @@ export default function App() {
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
               <h2 className="page-title font-display">Presupuestos</h2>
-              <div className="flex gap-2">
-                <button onClick={()=>{setNewBudget(EMPTY_BUDGET);setClientSearchB('');setView('add_budget');}} className="btn-primary" style={{width:'auto',padding:'10px 16px',fontSize:'13px'}}><Plus size={15}/>Nuevo</button>
-                <DangerBtn onClick={()=>deleteAll('budgets')}/>
-              </div>
+              <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
-            {budgets.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
+            {listMode==='grid'&&(
+              <div className="grid grid-cols-2 gap-3">
+                {budgets.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
+                  const emp2=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
+                  return (
+                    <div key={budget.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
+                      <h4 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{budget.clientName||'—'}</h4>
+                      <p className={`text-xs truncate ${dm?'text-slate-400':'text-slate-500'}`}>{budget.vehicle}</p>
+                      <p className="text-xs text-slate-400">📅 {budget.date?new Date(budget.date+'T12:00:00').toLocaleDateString('es-AR'):'—'}</p>
+                      <p className="font-black text-blue-500 font-display mt-1">${budget.totalCost?.toLocaleString()}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {listMode==='list'&&budgets.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
               const emp=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
               return (
                 <div key={budget.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
@@ -1048,12 +1117,21 @@ export default function App() {
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
               <h2 className="page-title font-display">Clientes</h2>
-              <div className="flex gap-2">
-                <button onClick={()=>setView('add_client')} className="btn-primary" style={{width:'auto',padding:'10px 16px',fontSize:'13px'}}><Plus size={15}/>Nuevo</button>
-                <DangerBtn onClick={()=>deleteAll('clients')}/>
-              </div>
+              <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
-            {clients.map(client=>(
+            {listMode==='grid'&&(
+              <div className="grid grid-cols-2 gap-3">
+                {clients.map(c2=>(
+                  <div key={c2.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #8b5cf6'}}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-black text-sm mb-2" style={{background:'linear-gradient(135deg,#8b5cf6,#7c3aed)'}}>{c2.name?.[0]}</div>
+                    <h4 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{c2.name}</h4>
+                    {c2.phone&&<p className="text-xs text-slate-400">{c2.phone}</p>}
+                    <p className="text-xs text-slate-400 mt-0.5">{getClientVehicles(c2.id).length} vehículo(s)</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {listMode==='list'&&clients.map(client=>(
               <div key={client.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #8b5cf6'}}>
                 <div className="flex justify-between items-start mb-2">
                   <div><h4 className="font-bold">{client.name}</h4>{client.phone&&<p className={`text-sm mt-0.5 ${dm?'text-slate-400':'text-slate-500'}`}>📞 {client.phone}</p>}{client.email&&<p className={`text-xs ${dm?'text-slate-500':'text-slate-400'}`}>{client.email}</p>}</div>
@@ -1074,6 +1152,7 @@ export default function App() {
                 )}
               </div>
             ))}
+            ))}
             {clients.length===0&&<EC icon={<Users size={36}/>} text="No hay clientes" dm={dm}/>}
           </div>
         )}
@@ -1083,10 +1162,7 @@ export default function App() {
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
               <h2 className="page-title font-display">Vehículos</h2>
-              <div className="flex gap-2">
-                <button onClick={()=>setView('add_vehicle')} className="btn-primary" style={{width:'auto',padding:'10px 16px',fontSize:'13px'}}><Plus size={15}/>Nuevo</button>
-                <DangerBtn onClick={()=>deleteAll('vehicles')}/>
-              </div>
+              <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
             {vehicles.map(v=>(
               <div key={v.id} className={`card card-s p-5 flex justify-between items-start ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #14b8a6'}}>

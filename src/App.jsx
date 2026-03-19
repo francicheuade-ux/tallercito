@@ -38,9 +38,9 @@ const STATUS_CONFIG = {
   entregado: { label:'Entregado', tw:'bg-slate-100 text-slate-500 border-slate-200', dot:'bg-slate-400', icon:'📦' },
 };
 const PAYMENT_CONFIG = {
-  debe: { label:'Debe', color:'#ef4444', bg:'rgba(239,68,68,0.12)', icon:'❌' },
-  señado: { label:'Señado', color:'#f59e0b', bg:'rgba(245,158,11,0.12)', icon:'⚡' },
-  pagado: { label:'Pagado', color:'#10b981', bg:'rgba(16,185,129,0.12)', icon:'✅' },
+  debe: { label:'Debe', color:'#ef4444', bg:'rgba(239,68,68,0.15)', icon:'❌' },
+  señado: { label:'Señado', color:'#f59e0b', bg:'rgba(245,158,11,0.15)', icon:'⚡' },
+  pagado: { label:'Pagado', color:'#10b981', bg:'rgba(16,185,129,0.15)', icon:'✅' },
 };
 
 const DEFAULT_CONFIG = {
@@ -63,8 +63,8 @@ const EMPTY_PRODUCT = { name:'', sku:'', barcode:'', location:'', quantity:0, mi
 function ViewToggle({mode, setMode, dm}) {
   return (
     <div className={`flex rounded-xl overflow-hidden border ${dm?'border-[#30363d]':'border-slate-200'}`}>
-      <button onClick={()=>{setMode('list');localStorage.setItem('tm_listmode','list');}} className={`p-2 transition-colors ${mode==='list'?(dm?'bg-[#30363d] text-white':'bg-slate-200 text-slate-800'):(dm?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600')}`}><LayoutList size={16}/></button>
-      <button onClick={()=>{setMode('grid');localStorage.setItem('tm_listmode','grid');}} className={`p-2 transition-colors ${mode==='grid'?(dm?'bg-[#30363d] text-white':'bg-slate-200 text-slate-800'):(dm?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600')}`}><LayoutGrid size={16}/></button>
+      <button onClick={()=>{setMode('list');localStorage.setItem('tm_listmode','list');}} className={`p-2 transition-colors ${mode==='list'?'bg-orange-500 text-white':(dm?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600')}`}><LayoutList size={16}/></button>
+      <button onClick={()=>{setMode('grid');localStorage.setItem('tm_listmode','grid');}} className={`p-2 transition-colors ${mode==='grid'?'bg-orange-500 text-white':(dm?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600')}`}><LayoutGrid size={16}/></button>
     </div>
   );
 }
@@ -620,7 +620,7 @@ export default function App() {
         /* BUTTONS */
         .btn-primary{background:linear-gradient(135deg,#ff6b1a,#e85510);color:white;padding:13px 20px;border-radius:13px;font-weight:700;display:flex;align-items:center;gap:8px;justify-content:center;cursor:pointer;border:none;width:100%;font-size:15px;box-shadow:0 4px 20px rgba(249,115,22,0.4),0 1px 3px rgba(0,0,0,0.2);transition:all 0.2s;letter-spacing:0.2px}
         .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(249,115,22,0.5)}.btn-primary:disabled{opacity:0.45;transform:none;cursor:not-allowed}
-        .btn-dark{background:#111827;color:white;padding:9px 16px;border-radius:11px;font-weight:700;display:flex;align-items:center;gap:6px;justify-content:center;cursor:pointer;border:none;font-size:13px;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.2)}.btn-dark:hover{background:#1f2937}
+        .btn-dark{background:#1e293b;color:#f8fafc;padding:9px 16px;border-radius:11px;font-weight:700;display:flex;align-items:center;gap:6px;justify-content:center;cursor:pointer;border:none;font-size:13px;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.2)}.btn-dark:hover{background:#334155}
         .btn-ghost{padding:9px 14px;border-radius:11px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;transition:all 0.2s;border:2px solid}
 
         /* LABELS & STATUS */
@@ -734,8 +734,8 @@ export default function App() {
         </div>
       )}
 
-      {/* SIDEBAR — desktop only, visible on dashboard */}
-      <nav className={`hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 p-5 z-50 transition-all duration-300 ${view==='dashboard'?'translate-x-0 opacity-100':'translate-x-[-100%] opacity-0 pointer-events-none'}`} style={{background:dm?'#07090d':'#0c1018',borderRight:'1px solid rgba(255,255,255,0.06)',boxShadow:'4px 0 24px rgba(0,0,0,0.3)'}}>
+      {/* SIDEBAR — desktop only, only on dashboard */}
+      {view==='dashboard'&&<nav className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 p-5 z-50" style={{background:dm?'#07090d':'#0c1018',borderRight:'1px solid rgba(255,255,255,0.06)',boxShadow:'4px 0 24px rgba(0,0,0,0.3)'}}>
         <div className="flex items-center gap-3 mb-5">
           <div className="p-2 rounded-xl flex-shrink-0" style={{background:'linear-gradient(135deg,#f97316,#ea580c)'}}><Wrench size={20} className="text-white"/></div>
           <div><h1 className="text-white font-display font-black text-base leading-tight">TallerMaster</h1><p className="text-slate-500 text-xs">{tallerConfig.nombre}</p></div>
@@ -759,7 +759,7 @@ export default function App() {
           <button onClick={startQRScan} className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border" style={{color:'#f97316',borderColor:'rgba(249,115,22,0.3)',background:'rgba(249,115,22,0.05)'}}><QrCode size={15}/>QR</button>
           <button onClick={()=>setDarkMode(!dm)} className="p-2.5 rounded-xl border" style={{borderColor:'rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.05)',color:'white'}}>{dm?<Sun size={17}/>:<Moon size={17}/>}</button>
         </div>
-      </nav>
+      </nav>}
 
       {/* FLOATING MOBILE NAV — always visible */}
       <div className="md:hidden floating-nav" style={{background:dm?'rgba(22,27,34,0.92)':'rgba(255,255,255,0.92)',boxShadow:dm?'0 8px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.06)':'0 8px 32px rgba(0,0,0,0.15),0 0 0 1px rgba(0,0,0,0.06)'}}>
@@ -779,17 +779,17 @@ export default function App() {
 
       {/* SLIM TOP BAR — shows on all non-dashboard views */}
       {view!=='dashboard'&&(
-        <div className={`fixed top-0 left-0 right-0 z-40 flex items-center gap-3 px-4 py-3 ${dm?'bg-[#07090d]':'bg-white'}`} style={{borderBottom:`1px solid ${dm?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}`,backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
-          <button onClick={()=>setView('dashboard')} className={`p-2 rounded-xl flex-shrink-0 transition-colors ${dm?'hover:bg-[#161b22] text-slate-300':'hover:bg-slate-100 text-slate-600'}`}><ChevronLeft size={20}/></button>
+        <div className="fixed top-0 left-0 right-0 z-40 flex items-center gap-3 px-4 py-3" style={{background:dm?'rgba(7,9,13,0.95)':'rgba(12,16,24,0.97)',borderBottom:'1px solid rgba(255,255,255,0.07)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
+          <button onClick={()=>setView('dashboard')} className="p-2 rounded-xl flex-shrink-0 transition-colors hover:bg-white/10 text-white"><ChevronLeft size={20}/></button>
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <div className="p-1.5 rounded-lg flex-shrink-0" style={{background:'linear-gradient(135deg,#ff6b1a,#e85510)'}}><Wrench size={13} className="text-white"/></div>
-            <span className={`font-display font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{
+            <span className={`font-display font-bold text-sm truncate text-white`}>{
               {list:'Inventario',repairs:'Servicios',budgets:'Presupuestos',clients:'Clientes',vehicles_list:'Vehículos',history:'Historial',stock_history:'Mov. Stock',stats:'Estadísticas',ai_assistant:'Asistente IA',config:'Configuración',details:'Detalle',add:'Nuevo Repuesto',add_repair:'Nuevo Servicio',edit_repair:'Editar Servicio',add_budget:'Nuevo Presupuesto',edit_budget:'Editar Presupuesto',add_client:'Nuevo Cliente',edit_client:'Editar Cliente',add_vehicle:'Nuevo Vehículo',edit_vehicle:'Editar Vehículo',edit_product:'Editar Repuesto',search:'Búsqueda',camera:'Cámara',scan:'Escáner QR'}[view]||view
             }</span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={startQRScan} className={`p-2 rounded-xl transition-colors ${dm?'hover:bg-[#161b22] text-orange-500':'hover:bg-orange-50 text-orange-500'}`}><QrCode size={18}/></button>
-            <button onClick={()=>setDarkMode(!dm)} className={`p-2 rounded-xl transition-colors ${dm?'hover:bg-[#161b22] text-slate-400':'hover:bg-slate-100 text-slate-500'}`}>{dm?<Sun size={18}/>:<Moon size={18}/>}</button>
+            <button onClick={startQRScan} className="p-2 rounded-xl transition-colors hover:bg-white/10 text-orange-400"><QrCode size={18}/></button>
+            <button onClick={()=>setDarkMode(!dm)} className="p-2 rounded-xl transition-colors hover:bg-white/10 text-slate-400">{dm?<Sun size={18}/>:<Moon size={18}/>}</button>
           </div>
         </div>
       )}

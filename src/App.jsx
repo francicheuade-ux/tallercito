@@ -287,12 +287,15 @@ export default function App() {
   const askAI = async prompt => {
     setAiLoading(true); setAiResponse('');
     try {
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],systemInstruction:{parts:[{text:"Sos un experto jefe de taller mecánico argentino. Respondé en español rioplatense, claro y práctico."}]}})});
-      const data=await res.json();
-      const text=data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error();
-      setAiResponse(text);
-    } catch { setAiResponse("⚠️ La IA no responde. Verificá tu API key en aistudio.google.com"); }
+      const res = await fetch('https://tallercito-ai.francicheuade.workers.dev/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await res.json();
+      if (!data.text) throw new Error();
+      setAiResponse(data.text);
+    } catch { setAiResponse("⚠️ La IA no responde. Intentá de nuevo en unos segundos."); }
     finally { setAiLoading(false); }
   };
   const [aiLoading,setAiLoading]=useState(false);

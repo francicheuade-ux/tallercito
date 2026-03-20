@@ -973,10 +973,10 @@ export default function App() {
           <div><h1 className="text-white font-display font-black text-base leading-tight">TallerMaster</h1><p className="text-slate-500 text-xs">{tallerConfig.nombre}</p></div>
         </div>
         {/* User badge */}
-        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl overflow-hidden" style={{background:'rgba(255,255,255,0.05)'}}>
-          <div className="w-7 h-7 min-w-[28px] min-h-[28px] rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0" style={{background:currentUser.color||'#f97316'}}>{(currentUser.name||'?')[0]}</div>
-          <div className="flex-1 min-w-0 overflow-hidden"><p className="text-white text-xs font-bold truncate">{currentUser.name}</p><p className="text-slate-500 text-[10px]">{currentUser.role}</p></div>
-          <button onClick={handleLogout} className="text-slate-500 hover:text-red-400 transition-colors flex-shrink-0"><LogOut size={14}/></button>
+        <div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
+          <div className="w-7 h-7 min-w-[28px] min-h-[28px] rounded-lg flex items-center justify-center text-white text-xs font-black flex-shrink-0" style={{background:'rgba(249,115,22,0.25)',border:'1px solid rgba(249,115,22,0.4)',color:'#f97316'}}>{(currentUser.name||'?')[0]}</div>
+          <div className="flex-1 min-w-0"><p className="text-slate-200 text-xs font-bold truncate">{currentUser.name}</p><p className="text-slate-500 text-[10px] capitalize">{currentUser.role}</p></div>
+          <button onClick={handleLogout} className="text-slate-600 hover:text-red-400 transition-colors flex-shrink-0 p-1 rounded-lg hover:bg-red-500/10"><LogOut size={13}/></button>
         </div>
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={14}/>
@@ -1212,20 +1212,22 @@ export default function App() {
                 const matchStock = !invFilter.stock || (invFilter.stock==='low'&&p.quantity>0&&p.quantity<=p.minStock) || (invFilter.stock==='ok'&&p.quantity>p.minStock) || (invFilter.stock==='zero'&&p.quantity===0);
                 return matchSearch&&matchCat&&matchStock;
               }).map(item=>(
-                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer p-3 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-                    <div className="flex items-center gap-3">
-                      {item.imageUrl
-                        ?<img src={item.imageUrl} alt={item.name} className="w-12 h-12 object-cover rounded-xl flex-shrink-0"/>
-                        :<div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${dm?'bg-[#0d1117]':'bg-slate-100'}`}><Package size={18} className="opacity-30"/></div>
-                      }
+                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer overflow-hidden ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+                    <div className="p-3 flex items-center gap-2.5">
+                      <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0" style={{minWidth:'44px',minHeight:'44px',maxWidth:'44px',maxHeight:'44px'}}>
+                        {item.imageUrl
+                          ?<img src={item.imageUrl} alt={item.name} style={{width:'44px',height:'44px',objectFit:'cover',display:'block'}}/>
+                          :<div className={`w-full h-full flex items-center justify-center ${dm?'bg-[#0d1117]':'bg-slate-100'}`}><Package size={16} className="opacity-30"/></div>
+                        }
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-1">
                           <h3 className={`font-bold text-xs leading-tight truncate ${dm?'text-white':'text-slate-900'}`}>{item.name}</h3>
-                          {item.quantity<=item.minStock&&<span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-0.5"/>}
+                          {item.quantity<=item.minStock&&<span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0 mt-0.5"/>}
                         </div>
-                        {item.categoryId&&categories.find(c=>c.id===item.categoryId)&&<p className="text-[10px] font-bold text-orange-500">{categories.find(c=>c.id===item.categoryId).name}</p>}
-                        <p className={`font-black font-display text-sm ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
+                        {item.categoryId&&categories.find(c=>c.id===item.categoryId)&&<p className="text-[10px] font-bold text-orange-500 truncate">{categories.find(c=>c.id===item.categoryId).name}</p>}
+                        <p className={`font-black font-display text-sm leading-tight ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
                       </div>
                     </div>
                   </div>

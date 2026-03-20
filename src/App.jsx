@@ -724,6 +724,14 @@ export default function App() {
   const dm=darkMode;
 
   // ── LOGIN SCREEN ──────────────────────────────────────────────
+  // Wait for Firebase to load users before showing login
+  if (!configLoaded) return (
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px',background:'linear-gradient(145deg,#0a0a0f,#12100e,#1a0f08)'}}>
+      <div style={{padding:'16px',borderRadius:'16px',background:'linear-gradient(135deg,#f97316,#ea580c)'}}><Wrench size={28} color="white"/></div>
+      <Loader2 className="animate-spin" size={32} color="#f97316"/>
+      <p style={{color:'#6b7280',fontSize:'13px',fontWeight:500}}>Cargando...</p>
+    </div>
+  );
   if (!currentUser) return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',background:'linear-gradient(145deg,#0a0a0f 0%,#12100e 40%,#1a0f08 100%)'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
@@ -789,11 +797,9 @@ export default function App() {
     </div>
   );
 
-  if (loading || !configLoaded) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{background:'linear-gradient(145deg,#0a0a0f,#12100e,#1a0f08)'}}>
-      <div className="p-4 rounded-2xl" style={{background:'linear-gradient(135deg,#f97316,#ea580c)'}}><Wrench size={28} className="text-white"/></div>
-      <Loader2 className="animate-spin text-orange-500" size={32}/>
-      <p className="text-slate-500 text-sm font-medium">Cargando TallerMaster...</p>
+  if (loading) return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#090b0f'}}>
+      <Loader2 className="animate-spin" size={32} color="#f97316"/>
     </div>
   );
 

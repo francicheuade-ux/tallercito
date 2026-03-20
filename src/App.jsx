@@ -410,7 +410,7 @@ export default function App() {
   const saveRepair = async e => {
     e.preventDefault();
     const batch=writeBatch(db);
-    const orderNum=nextOrder();
+    const orderNum=await nextOrder();
     const ref=doc(collection(db,'artifacts',appId,'public','data','repairs'));
     const partsCost=newRepair.partsUsed.reduce((s,p)=>s+(p.cost*p.qty),0);
     const total=partsCost+Number(newRepair.laborCost);
@@ -1027,7 +1027,7 @@ export default function App() {
       )}
 
       {/* CONTEXTUAL FAB — shows + button per section */}
-      {['list','repairs','budgets','clients','vehicles_list'].includes(view)&&(
+      {['list','repairs','budgets','clients','vehicles_list'].includes(view)&&!['add','add_repair','edit_repair','add_budget','edit_budget','add_client','edit_client','add_vehicle','edit_vehicle','edit_product'].includes(view)&&(
         <button
           onClick={()=>{
             if(view==='list') setView('add');
@@ -1051,7 +1051,7 @@ export default function App() {
         </div>
       )}
 
-      <main className={`p-4 md:p-8 max-w-4xl mx-auto ${view!=='dashboard'?'pt-16':''}`}>
+      <main className={`p-4 md:p-8 max-w-4xl mx-auto ${view!=='dashboard'?'pt-16':''} ${['add','add_repair','edit_repair','add_budget','edit_budget','add_client','edit_client','add_vehicle','edit_vehicle','edit_product'].includes(view)?'pb-32':''}`}>
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(
@@ -1089,7 +1089,7 @@ export default function App() {
             </div>
             {chartData.some(d=>d.total>0)&&(
               <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-                <p className="font-display font-bold mb-4 text-sm">Ingresos — últimos 6 meses</p>
+                <p className={`font-display font-bold mb-4 text-sm ${dm?'text-white':'text-slate-800'}`}>Ingresos — últimos 6 meses</p>
                 <div className="flex items-end gap-2 h-28">
                   {chartData.map((d,i)=>(
                     <div key={i} className="flex-1 flex flex-col items-center gap-1">
@@ -1125,10 +1125,42 @@ export default function App() {
               <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'4px solid #ef4444'}}>
                 <p className="font-bold text-red-500 flex items-center gap-2 text-sm mb-3"><AlertCircle size={14}/>Stock bajo</p>
                 {inventory.filter(p=>p.quantity<=p.minStock).map(p=>(
-                  <div key={p.id} className={`flex justify-between text-sm py-1.5 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}><span className="font-medium">{p.name}</span><span className="font-black text-red-500">{p.quantity} un.</span></div>
+                  <div key={p.id} className={`flex justify-between text-sm py-1.5 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}><span className={`font-medium ${dm?'text-white':'text-slate-800'}`}>{p.name}</span><span className="font-black text-red-500">{p.quantity} un.</span></div>
                 ))}
               </div>
             )}
+
+            {/* FACTURACIÓN RÁPIDA */}
+            <div className="rounded-2xl overflow-hidden" style={{background:'linear-gradient(135deg,#0f2027,#1a3a4a,#0f2027)',border:'1px solid rgba(59,130,246,0.2)'}}>
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl" style={{background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)'}}><CreditCard size={18} className="text-blue-400"/></div>
+                    <div>
+                      <p className="font-display font-bold text-white text-sm">Facturación ARCA</p>
+                      <p className="text-xs text-slate-400">Acceso rápido al portal de AFIP</p>
+                    </div>
+                  </div>
+                  <button onClick={()=>window.open('https://arca.afip.gob.ar','_blank')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105 active:scale-95" style={{background:'linear-gradient(135deg,#2563eb,#1d4ed8)',boxShadow:'0 4px 16px rgba(37,99,235,0.4)'}}>
+                    🧾 Ir a ARCA
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  {(tallerConfig.empresas||[]).map(emp=>(
+                    <div key={emp.id} className="rounded-xl p-3 flex items-center justify-between gap-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
+                      <div className="min-w-0">
+                        <p className="font-bold text-white text-sm truncate">{emp.nombre}</p>
+                        <p className="text-xs text-slate-400 font-mono">{emp.cuit||'Sin CUIT cargado'}</p>
+                      </div>
+                      {emp.cuit&&<button onClick={()=>{navigator.clipboard.writeText(emp.cuit);showNotif('✓ CUIT copiado');}} className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-400 transition-colors hover:bg-blue-500/10" style={{border:'1px solid rgba(59,130,246,0.3)'}}>Copiar CUIT</button>}
+                    </div>
+                  ))}
+                  {(!tallerConfig.empresas||tallerConfig.empresas.length===0)&&(
+                    <p className="text-xs text-slate-500 text-center py-2">Cargá tus empresas en Configuración para ver los datos aquí</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1306,7 +1338,7 @@ export default function App() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       {rep.orderNumber&&<span className="text-xs font-bold text-orange-500 font-mono">{rep.orderNumber}</span>}
-                      <h4 className="font-bold">{rep.vehicle}</h4>
+                      <h4 className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle}</h4>
                       {rep.plate&&<span className={`font-mono text-xs px-2 py-0.5 rounded-lg ${dm?'bg-[#0d1117] text-slate-400':'bg-slate-100 text-slate-500'}`}>{rep.plate}</span>}
                       <SPill status={rep.status||'pendiente'}/>
                     </div>
@@ -1421,7 +1453,7 @@ export default function App() {
             {listMode==='list'&&clients.map(client=>(
               <div key={client.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #8b5cf6'}}>
                 <div className="flex justify-between items-start mb-2">
-                  <div><h4 className="font-bold">{client.name}</h4>{client.phone&&<p className={`text-sm mt-0.5 ${dm?'text-slate-400':'text-slate-500'}`}>📞 {client.phone}</p>}{client.email&&<p className={`text-xs ${dm?'text-slate-500':'text-slate-400'}`}>{client.email}</p>}</div>
+                  <div><h4 className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{client.name}</h4>{client.phone&&<p className={`text-sm mt-0.5 ${dm?'text-slate-400':'text-slate-500'}`}>📞 {client.phone}</p>}{client.email&&<p className={`text-xs ${dm?'text-slate-500':'text-slate-400'}`}>{client.email}</p>}</div>
                   <div className="flex gap-2">
                     <button onClick={()=>{setEditingClient({...client});setView('edit_client');}} className="p-2 text-blue-400 rounded-xl"><Edit3 size={14}/></button>
                     <button onClick={()=>deleteItem('clients',client.id,client.name)} className="p-2 text-red-400 rounded-xl"><Trash2 size={14}/></button>
@@ -1471,13 +1503,13 @@ export default function App() {
         {/* HISTORIAL */}
         {view==='history'&&(
           <div className="space-y-4 anim">
-            <h2 className="page-title font-display">Historial Vehículo</h2>
+            <h2 className={`page-title font-display ${dm?'text-white':'text-slate-900'}`}>Historial Vehículo</h2>
             <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15}/><input className={`inp pl-9 ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="Patente o modelo..." value={vehicleFilter} onChange={e=>setVehicleFilter(e.target.value)}/></div>
             {vehicleFilter&&vehicleHistory.length===0&&<div className={`card card-s p-8 text-center text-sm ${dm?'bg-[#161b22] text-slate-500':'bg-white text-slate-400'}`}>Sin registros para "{vehicleFilter}"</div>}
             {vehicleHistory.sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
               <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                 <div className="flex justify-between items-start mb-1">
-                  <div><h4 className="font-bold">{rep.vehicle} <span className="font-mono text-sm text-slate-400">{rep.plate}</span></h4>
+                  <div><h4 className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle} <span className="font-mono text-sm text-slate-400">{rep.plate}</span></h4>
                     <div className={`flex gap-3 text-xs mt-0.5 ${dm?'text-slate-500':'text-slate-400'}`}>{rep.km&&<span>🔢 {Number(rep.km).toLocaleString()} km</span>}{rep.date?.seconds&&<span>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}</div></div>
                   <p className="font-black text-emerald-500 font-display">${rep.totalCost?.toLocaleString()}</p>
                 </div>
@@ -1514,7 +1546,7 @@ export default function App() {
         {view==='stats'&&(
           <div className="space-y-5 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Estadísticas</h2>
+              <h2 className={`page-title font-display ${dm?'text-white':'text-slate-900'}`}>Estadísticas</h2>
               <select className={`inp text-sm ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} style={{width:'auto',padding:'8px 12px'}} value={statsMonth} onChange={e=>setStatsMonth(Number(e.target.value))}>
                 {MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}
               </select>
@@ -1534,7 +1566,7 @@ export default function App() {
               ))}
             </div>
             <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-              <p className="font-display font-bold mb-4 text-sm">Ingresos últimos 6 meses</p>
+              <p className={`font-display font-bold mb-4 text-sm ${dm?'text-white':'text-slate-800'}`}>Ingresos últimos 6 meses</p>
               <div className="flex items-end gap-2 h-32">
                 {chartData.map((d,i)=>(
                   <div key={i} className="flex-1 flex flex-col items-center gap-1">
@@ -1559,7 +1591,7 @@ export default function App() {
             )}
             {topParts.length>0&&(
               <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-                <p className="font-display font-bold mb-3 text-sm flex items-center gap-2"><Package size={15} className="text-orange-500"/>Repuestos más usados</p>
+                <p className={`font-display font-bold mb-3 text-sm flex items-center gap-2 ${dm?'text-white':'text-slate-800'}`}><Package size={15} className="text-orange-500"/>Repuestos más usados</p>
                 {topParts.map(([name,qty],i)=>(
                   <div key={i} className={`flex items-center gap-3 py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}>
                     <span className="text-lg font-black text-blue-500 w-6">{i+1}</span>
@@ -1575,10 +1607,10 @@ export default function App() {
         {/* CONFIGURACIÓN */}
         {view==='config'&&(
           <div className="space-y-5 anim max-w-lg mx-auto">
-            <h2 className="page-title font-display">Configuración</h2>
+            <h2 className={`page-title font-display ${dm?'text-white':'text-slate-900'}`}>Configuración</h2>
             {/* Taller data */}
             <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-              <p className="font-bold text-sm flex items-center gap-2"><Settings size={15} className="text-orange-500"/>Datos del taller</p>
+              <p className={`font-bold text-sm flex items-center gap-2 ${dm?'text-white':'text-slate-800'}`}><Settings size={15} className="text-orange-500"/>Datos del taller</p>
               {editConfig?(
                 <>
                   {[['nombre','Nombre'],['direccion','Dirección'],['telefono','Teléfono'],['email','Email']].map(([f,l])=>(
@@ -1592,7 +1624,7 @@ export default function App() {
               ):(
                 <>
                   <div className={`rounded-2xl p-4 space-y-1.5 ${dm?'bg-[#0d1117]':'bg-slate-50'}`}>
-                    <p className="font-black">{tallerConfig.nombre}</p>
+                    <p className={`font-black ${dm?'text-white':'text-slate-900'}`}>{tallerConfig.nombre}</p>
                     <p className={`text-sm ${dm?'text-slate-400':'text-slate-500'}`}>📍 {tallerConfig.direccion}</p>
                     <p className={`text-sm ${dm?'text-slate-400':'text-slate-500'}`}>📞 {tallerConfig.telefono}</p>
                     <p className={`text-sm ${dm?'text-slate-400':'text-slate-500'}`}>✉️ {tallerConfig.email}</p>
@@ -1604,7 +1636,7 @@ export default function App() {
 
             {/* Empresas de facturación */}
             <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-              <p className="font-bold text-sm flex items-center gap-2"><Building2 size={15} className="text-blue-500"/>Empresas de facturación</p>
+              <p className={`font-bold text-sm flex items-center gap-2 ${dm?'text-white':'text-slate-800'}`}><Building2 size={15} className="text-blue-500"/>Empresas de facturación</p>
               {(tallerConfig.empresas||[]).map((emp,i)=>(
                 <div key={emp.id} className={`rounded-2xl p-4 border ${dm?'bg-[#0d1117] border-[#30363d]':'bg-slate-50 border-slate-200'}`}>
                   <div className="flex justify-between items-start">
@@ -1655,7 +1687,7 @@ export default function App() {
             {/* Usuarios */}
             <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
               <div className="flex justify-between items-center">
-                <p className="font-bold text-sm flex items-center gap-2"><Shield size={15} className="text-green-500"/>Usuarios</p>
+                <p className={`font-bold text-sm flex items-center gap-2 ${dm?'text-white':'text-slate-800'}`}><Shield size={15} className="text-green-500"/>Usuarios</p>
                 <button onClick={()=>setShowAddUser(!showAddUser)} className={`btn-ghost text-xs py-1.5 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}><Plus size={13}/>Agregar</button>
               </div>
               {tallerUsers.map(u=>(
@@ -1696,7 +1728,7 @@ export default function App() {
 
             {/* Categorías de inventario */}
             <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-              <p className="font-bold text-sm flex items-center gap-2"><Box size={15} className="text-orange-500"/>Categorías de inventario</p>
+              <p className={`font-bold text-sm flex items-center gap-2 ${dm?'text-white':'text-slate-800'}`}><Box size={15} className="text-orange-500"/>Categorías de inventario</p>
               <div className="space-y-2">
                 {categories.map(cat=>(
                   <div key={cat.id} className={`flex items-center justify-between rounded-xl px-4 py-3 ${dm?'bg-[#0d1117]':'bg-slate-50'}`}>
@@ -1758,7 +1790,7 @@ export default function App() {
           <div className={`card card-s p-6 space-y-4 max-w-xl mx-auto anim ${dm?'bg-[#161b22]':'bg-white'}`}>
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl" style={{background:'linear-gradient(135deg,#fbbf24,#f59e0b)'}}><Sparkles size={20} className="text-white"/></div>
-              <div><h2 className="font-display font-black text-xl">Asistente IA</h2><p className={`text-xs ${dm?'text-slate-400':'text-slate-500'}`}>Diagnósticos técnicos</p></div>
+              <div><h2 className={`font-display font-black text-xl ${dm?'text-white':'text-slate-900'}`}>Asistente IA</h2><p className={`text-xs ${dm?'text-slate-400':'text-slate-500'}`}>Diagnósticos técnicos</p></div>
             </div>
             <textarea className={`inp h-36 resize-none ${dm?'bg-[#0d1117] border-[#30363d] text-white placeholder-slate-600':'bg-slate-50 border-slate-200'}`} placeholder="Ej: Ford Focus 2012, ruido metálico al frenar..." value={diagnosisQuery} onChange={e=>setDiagnosisQuery(e.target.value)}/>
             <button onClick={()=>askAI(`Soy mecánico. Problema: ${diagnosisQuery}. Dame diagnóstico probable, qué revisar y repuestos necesarios.`)} disabled={aiLoading||!diagnosisQuery.trim()} className="btn-primary disabled:opacity-50">

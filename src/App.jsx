@@ -111,7 +111,7 @@ export default function App() {
   // Config
   const [tallerConfig, setTallerConfig] = useState(DEFAULT_CONFIG);
   const [tallerUsers, setTallerUsers] = useState(DEFAULT_USERS);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('tm_dark') !== '0');
+  const [darkMode, setDarkMode] = useState(true); // Always dark mode
   const [orderCounter, setOrderCounter] = useState(0);
   const [configLoaded, setConfigLoaded] = useState(false);
 
@@ -155,6 +155,9 @@ export default function App() {
   const [showQRModal, setShowQRModal] = useState(false);
   const [scannedNewBarcode, setScannedNewBarcode] = useState(null);
   const [showNewBarcodeModal, setShowNewBarcodeModal] = useState(false);
+  const [flashOn, setFlashOn] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const qrInstanceRef = useRef(null);
   const [qrAction, setQrAction] = useState(null);
   const [selectedRepairForQR, setSelectedRepairForQR] = useState('');
   const [qrQty, setQrQty] = useState(1);
@@ -184,7 +187,7 @@ export default function App() {
 
   const showNotif = useCallback((msg, type='success') => { setNotification({msg,type}); setTimeout(()=>setNotification(null),3500); }, []);
 
-  useEffect(() => { document.documentElement.classList.toggle('dark', darkMode); localStorage.setItem('tm_dark', darkMode?'1':'0'); }, [darkMode]);
+  useEffect(() => { document.documentElement.classList.add('dark'); }, []);
   useEffect(() => { signInAnonymously(auth).catch(console.error); return onAuthStateChanged(auth, u=>{setUser(u);setLoading(false);}); }, []);
 
   useEffect(() => {
@@ -270,6 +273,7 @@ export default function App() {
         if (!window.Html5Qrcode){setTimeout(go,500);return;}
         try {
           qr=new window.Html5Qrcode("qr-reader");
+          qrInstanceRef.current = qr;
           const formats = [
             window.Html5QrcodeSupportedFormats?.QR_CODE,
             window.Html5QrcodeSupportedFormats?.EAN_13,
@@ -1810,22 +1814,48 @@ export default function App() {
         {/* QR SCAN */}
         {view==='scan'&&(
           <div className="fixed inset-0 z-[100] flex flex-col" style={{background:'#000'}}>
-            <div className="flex items-center justify-between p-5">
-              <button onClick={()=>setView('dashboard')} className="p-3 rounded-full" style={{background:'rgba(255,255,255,0.1)'}}><X size={22} className="text-white"/></button>
-              <p className="text-white font-bold">Escanear QR o código de barras</p>
-              <div style={{width:48}}/>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-12 pb-4">
+              <button onClick={()=>{setView('dashboard');setFlashOn(false);setZoomLevel(1);}} className="p-3 rounded-full" style={{background:'rgba(255,255,255,0.1)'}}><X size={22} className="text-white"/></button>
+              <p className="text-white font-bold text-sm">Escáner</p>
+              <button onClick={async()=>{
+                setFlashOn(f=>{
+                  const next=!f;
+                  try{ qrInstanceRef.current?.applyVideoConstraints({advanced:[{torch:next}]}); }catch{}
+                  return next;
+                });
+              }} className="p-3 rounded-full transition-all" style={{background:flashOn?'rgba(249,115,22,0.4)':'rgba(255,255,255,0.1)'}}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill={flashOn?"#f97316":"white"} xmlns="http://www.w3.org/2000/svg"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+              </button>
             </div>
+            {/* Viewfinder */}
             <div className="flex-1 relative flex items-center justify-center">
-              <div id="qr-reader" className="w-full max-w-xs"/>
+              <div id="qr-reader" className="w-full max-w-sm"/>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="relative w-64 h-64">
+                <div className="relative" style={{width:'260px',height:'160px'}}>
                   {[['top-0 left-0 border-t-4 border-l-4 rounded-tl-2xl'],['top-0 right-0 border-t-4 border-r-4 rounded-tr-2xl'],['bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl'],['bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl']].map(([cls],i)=>(
-                    <div key={i} className={`absolute w-10 h-10 border-orange-500 ${cls}`}/>
+                    <div key={i} className={`absolute w-8 h-8 border-orange-500 ${cls}`}/>
                   ))}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-full h-0.5 bg-orange-500 opacity-60" style={{animation:'pulse 1.5s ease-in-out infinite'}}/>
+                  </div>
                 </div>
               </div>
             </div>
-            <p className="text-white text-center pb-10 font-bold" style={{animation:'pulse 2s infinite'}}>Apuntá al código QR</p>
+            {/* Controls */}
+            <div className="pb-12 px-8 space-y-4">
+              <p className="text-slate-400 text-center text-xs">Apuntá al código QR o código de barras</p>
+              {/* Zoom slider */}
+              <div className="flex items-center gap-3">
+                <span className="text-white text-xs font-bold w-6 text-center">1x</span>
+                <input type="range" min="1" max="4" step="0.5" value={zoomLevel} onChange={e=>{
+                  const z=Number(e.target.value);
+                  setZoomLevel(z);
+                  try{ qrInstanceRef.current?.applyVideoConstraints({zoom:z}); }catch{}
+                }} className="flex-1 accent-orange-500" style={{accentColor:'#f97316'}}/>
+                <span className="text-white text-xs font-bold w-6 text-center">{zoomLevel}x</span>
+              </div>
+            </div>
           </div>
         )}
 

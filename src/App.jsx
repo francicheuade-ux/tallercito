@@ -631,55 +631,6 @@ export default function App() {
   };
 
   const printWorkOrder = repair => {
-    const win=window.open('','_blank');
-    const totalPaid=(repair.payments||[]).reduce((s,p)=>s+p.amount,0);
-    const remaining=Math.max(0,(repair.totalCost||0)-totalPaid);
-    win.document.write(`<!DOCTYPE html><html><head><title>Orden de Trabajo</title>
-    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#1e293b;max-width:760px;margin:0 auto}
-    .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;margin-bottom:24px;border-bottom:3px solid #f97316}
-    h1{font-size:22px;font-weight:900;color:#0f172a}.sub{font-size:11px;color:#64748b;margin-top:4px;line-height:1.6}
-    .order-num{font-size:28px;font-weight:900;color:#f97316;font-family:monospace}.order-label{font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;text-align:right}
-    .sec{margin:16px 0}.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #f1f5f9}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.item label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px}.item span{font-size:13px;font-weight:700}
-    table{width:100%;border-collapse:collapse;margin-top:8px}thead tr{background:#f97316}th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:white;text-transform:uppercase}
-    td{padding:8px 12px;font-size:12px;border-bottom:1px solid #f1f5f9}
-    .notes-box{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:8px;font-size:12px;margin-top:12px}
-    .payment-box{background:#f0fdf4;border:1px solid #bbf7d0;padding:14px;border-radius:10px;margin-top:12px}
-    .firma{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:40px}
-    .firma-line{border-top:1.5px solid #0f172a;padding-top:8px;font-size:10px;color:#94a3b8;text-align:center;margin-top:48px}
-    </style></head><body>
-    <div class="header">
-      <div><h1>${tallerConfig.nombre}</h1><p class="sub">${tallerConfig.direccion}<br>${tallerConfig.telefono}</p></div>
-      <div style="text-align:right"><div class="order-label">Orden de Trabajo</div><div class="order-num">${repair.orderNumber||'—'}</div><div style="font-size:11px;color:#94a3b8;margin-top:4px">${repair.date?.seconds?new Date(repair.date.seconds*1000).toLocaleDateString('es-AR'):new Date().toLocaleDateString('es-AR')}</div></div>
-    </div>
-    <div class="sec"><div class="sec-title">Vehículo y Cliente</div><div class="grid">
-      <div class="item"><label>Vehículo</label><span>${repair.vehicle||'—'}</span></div>
-      <div class="item"><label>Patente</label><span>${repair.plate||'—'}</span></div>
-      ${repair.km?`<div class="item"><label>Kilometraje</label><span>${Number(repair.km).toLocaleString()} km</span></div>`:''}
-      ${repair.clientName?`<div class="item"><label>Cliente</label><span>${repair.clientName}</span></div>`:''}
-    </div></div>
-    <div class="sec"><div class="sec-title">Trabajo a realizar</div>
-      <p style="font-size:13px;line-height:1.7;margin-top:6px">${repair.description||'—'}</p>
-    </div>
-    ${repair.partsUsed?.length>0?`<div class="sec"><div class="sec-title">Repuestos</div>
-    <table><thead><tr><th>Descripción</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>
-    ${repair.partsUsed.map(p=>`<tr><td>${p.name}</td><td>${p.qty}</td><td>$${Number(p.cost).toLocaleString()}</td><td>$${(p.cost*p.qty).toLocaleString()}</td></tr>`).join('')}
-    </tbody></table></div>`:''}
-    ${repair.notes?`<div class="notes-box">📝 ${repair.notes}</div>`:''}
-    <div class="payment-box">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:700">Total</span><span style="font-size:18px;font-weight:900">$${(repair.totalCost||0).toLocaleString()}</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:#64748b">Mano de obra</span><span style="font-size:11px;font-weight:700">$${Number(repair.laborCost||0).toLocaleString()}</span></div>
-      ${totalPaid>0?`<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:#64748b">Pagado</span><span style="font-size:11px;font-weight:700;color:#16a34a">$${totalPaid.toLocaleString()}</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:700">Saldo</span><span style="font-size:11px;font-weight:900;color:#ef4444">$${remaining.toLocaleString()}</span></div>`:''}
-    </div>
-    <div class="firma">
-      <div><div class="firma-line">Firma del cliente</div></div>
-      <div><div class="firma-line">Firma del mecánico</div></div>
-    </div>
-    </body></html>`);
-    win.document.close(); win.print();
-  };
-
-  const printWorkOrder = repair => {
     const win = window.open('','_blank');
     const dateStr = repair.date?.seconds ? new Date(repair.date.seconds*1000).toLocaleDateString('es-AR') : new Date().toLocaleDateString('es-AR');
     const paid = (repair.payments||[]).reduce((s,p)=>s+p.amount,0);

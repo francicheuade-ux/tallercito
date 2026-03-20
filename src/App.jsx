@@ -742,9 +742,26 @@ export default function App() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');*{font-family:'Space Grotesk',sans-serif}.font-display{font-family:'Outfit',sans-serif}`}</style>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 rounded-3xl mx-auto mb-4 flex items-center justify-center shadow-2xl" style={{background:'linear-gradient(135deg,#f97316,#ea580c)'}}><Wrench size={36} className="text-white"/></div>
-          <h1 className="font-display font-black text-3xl text-white">TallerMaster</h1>
-          <p className="text-slate-400 text-sm mt-1">Ingresá con tu usuario</p>
+          <div className="mx-auto mb-5 relative w-28 h-28">
+            <div className="w-28 h-28 rounded-3xl flex items-center justify-center shadow-2xl" style={{background:'linear-gradient(135deg,#1a0f08,#2d1a0a)',border:'1px solid rgba(249,115,22,0.3)'}}>
+              <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="32" width="56" height="22" rx="6" fill="#1e293b" stroke="#f97316" strokeWidth="1.5"/>
+                <rect x="14" y="38" width="12" height="8" rx="2" fill="#0d1117" stroke="#3b82f6" strokeWidth="1.2"/>
+                <rect x="46" y="38" width="12" height="8" rx="2" fill="#0d1117" stroke="#3b82f6" strokeWidth="1.2"/>
+                <ellipse cx="20" cy="56" rx="7" ry="7" fill="#0d1117" stroke="#f97316" strokeWidth="2"/>
+                <ellipse cx="20" cy="56" rx="3" ry="3" fill="#f97316"/>
+                <ellipse cx="52" cy="56" rx="7" ry="7" fill="#0d1117" stroke="#f97316" strokeWidth="2"/>
+                <ellipse cx="52" cy="56" rx="3" ry="3" fill="#f97316"/>
+                <path d="M14 32 L22 18 L50 18 L58 32" stroke="#f97316" strokeWidth="1.5" fill="#1e293b"/>
+                <rect x="26" y="20" width="20" height="10" rx="2" fill="#0d1117" stroke="#3b82f6" strokeWidth="1"/>
+                <path d="M42 8 L46 4 M42 8 L38 4 M42 8 L42 3" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="42" cy="11" r="3" fill="#f97316" opacity="0.8"/>
+              </svg>
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-xl flex items-center justify-center" style={{background:'linear-gradient(135deg,#f97316,#ea580c)',boxShadow:'0 4px 12px rgba(249,115,22,0.5)'}}><Wrench size={14} className="text-white"/></div>
+          </div>
+          <h1 className="font-display font-black text-3xl text-white tracking-tight">TallerMaster</h1>
+          <p className="text-slate-500 text-sm mt-1.5">Sistema de gestión de taller</p>
         </div>
         <div className="rounded-3xl p-7 space-y-4" style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,107,26,0.2)',backdropFilter:'blur(24px)',boxShadow:'0 24px 64px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.08)'}}>
           <div>
@@ -956,10 +973,10 @@ export default function App() {
           <div><h1 className="text-white font-display font-black text-base leading-tight">TallerMaster</h1><p className="text-slate-500 text-xs">{tallerConfig.nombre}</p></div>
         </div>
         {/* User badge */}
-        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl" style={{background:'rgba(255,255,255,0.05)'}}>
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0" style={{background:currentUser.color||'#f97316'}}>{currentUser.name[0]}</div>
-          <div className="flex-1 min-w-0"><p className="text-white text-xs font-bold truncate">{currentUser.name}</p><p className="text-slate-500 text-[10px]">{currentUser.role}</p></div>
-          <button onClick={handleLogout} className="text-slate-500 hover:text-red-400 transition-colors"><LogOut size={14}/></button>
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl overflow-hidden" style={{background:'rgba(255,255,255,0.05)'}}>
+          <div className="w-7 h-7 min-w-[28px] min-h-[28px] rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0" style={{background:currentUser.color||'#f97316'}}>{(currentUser.name||'?')[0]}</div>
+          <div className="flex-1 min-w-0 overflow-hidden"><p className="text-white text-xs font-bold truncate">{currentUser.name}</p><p className="text-slate-500 text-[10px]">{currentUser.role}</p></div>
+          <button onClick={handleLogout} className="text-slate-500 hover:text-red-400 transition-colors flex-shrink-0"><LogOut size={14}/></button>
         </div>
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={14}/>
@@ -1195,19 +1212,21 @@ export default function App() {
                 const matchStock = !invFilter.stock || (invFilter.stock==='low'&&p.quantity>0&&p.quantity<=p.minStock) || (invFilter.stock==='ok'&&p.quantity>p.minStock) || (invFilter.stock==='zero'&&p.quantity===0);
                 return matchSearch&&matchCat&&matchStock;
               }).map(item=>(
-                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer overflow-hidden ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-                    {item.imageUrl
-                      ?<img src={item.imageUrl} alt={item.name} className="w-full h-28 object-cover" style={{borderRadius:'18px 18px 0 0'}}/>
-                      :<div className={`w-full h-20 flex items-center justify-center ${dm?'bg-[#0d1117]':'bg-slate-50'}`} style={{borderRadius:'18px 18px 0 0'}}><Package size={24} className="opacity-20"/></div>
-                    }
-                    <div className="p-3">
-                      <div className="flex justify-between items-start gap-1 mb-1">
-                        <h3 className={`font-bold text-xs leading-tight ${dm?'text-white':'text-slate-900'}`}>{item.name}</h3>
-                        {item.quantity<=item.minStock&&<span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-0.5"/>}
+                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer p-3 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+                    <div className="flex items-center gap-3">
+                      {item.imageUrl
+                        ?<img src={item.imageUrl} alt={item.name} className="w-12 h-12 object-cover rounded-xl flex-shrink-0"/>
+                        :<div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${dm?'bg-[#0d1117]':'bg-slate-100'}`}><Package size={18} className="opacity-30"/></div>
+                      }
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-1">
+                          <h3 className={`font-bold text-xs leading-tight truncate ${dm?'text-white':'text-slate-900'}`}>{item.name}</h3>
+                          {item.quantity<=item.minStock&&<span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-0.5"/>}
+                        </div>
+                        {item.categoryId&&categories.find(c=>c.id===item.categoryId)&&<p className="text-[10px] font-bold text-orange-500">{categories.find(c=>c.id===item.categoryId).name}</p>}
+                        <p className={`font-black font-display text-sm ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
                       </div>
-                      {item.categoryId&&categories.find(c=>c.id===item.categoryId)&&<p className="text-[10px] font-bold text-orange-500 mb-0.5">{categories.find(c=>c.id===item.categoryId).name}</p>}
-                      <p className={`font-black font-display text-sm ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
                     </div>
                   </div>
                 ))}
@@ -1588,14 +1607,20 @@ export default function App() {
                 <div key={emp.id} className={`rounded-2xl p-4 border ${dm?'bg-[#0d1117] border-[#30363d]':'bg-slate-50 border-slate-200'}`}>
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-bold">{emp.nombre}</p>
+                      <p className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{emp.nombre}</p>
                       {emp.cuit&&<p className={`text-xs ${dm?'text-slate-400':'text-slate-500'}`}>CUIT: {emp.cuit}</p>}
                       <p className={`text-xs ${dm?'text-slate-500':'text-slate-400'}`}>{emp.telefono} · {emp.email}</p>
                     </div>
-                    <button onClick={()=>{
-                      const updated={...tallerConfig,empresas:(tallerConfig.empresas||[]).map((e,j)=>j===i?{...e,_editing:true}:e)};
-                      setEditConfig(updated);
-                    }} className="p-1.5 text-blue-400"><Edit3 size={14}/></button>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button onClick={()=>{
+                        const updated={...tallerConfig,empresas:(tallerConfig.empresas||[]).map((e,j)=>j===i?{...e,_editing:true}:e)};
+                        setEditConfig(updated);
+                      }} className="p-1.5 text-blue-400 rounded-xl hover:bg-blue-500/10 transition-colors"><Edit3 size={14}/></button>
+                      {(tallerConfig.empresas||[]).length>1&&<button onClick={()=>{
+                        const updated={...tallerConfig,empresas:(tallerConfig.empresas||[]).filter((_,j)=>j!==i)};
+                        setTallerConfig(updated); saveConfigToFirebase(updated,null); showNotif('Empresa eliminada');
+                      }} className="p-1.5 text-red-400 rounded-xl hover:bg-red-500/10 transition-colors"><Trash2 size={14}/></button>}
+                    </div>
                   </div>
                 </div>
               ))}

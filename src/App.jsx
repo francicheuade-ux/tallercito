@@ -725,10 +725,19 @@ export default function App() {
 
   // ── LOGIN SCREEN ──────────────────────────────────────────────
   if (!currentUser) return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'linear-gradient(145deg,#0a0a0f 0%,#12100e 40%,#1a0f08 100%)'}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');*{font-family:'Space Grotesk',sans-serif}.font-display{font-family:'Outfit',sans-serif}`}</style>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'16px',background:'linear-gradient(145deg,#0a0a0f 0%,#12100e 40%,#1a0f08 100%)'}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+      *{font-family:'Space Grotesk',sans-serif;box-sizing:border-box}
+      .font-display{font-family:'Outfit',sans-serif}
+      .login-input{width:100%;padding:12px 12px 12px 40px;border-radius:12px;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);color:white;outline:none;font-size:14px;font-family:'Space Grotesk',sans-serif}
+      .login-input::placeholder{color:#4b5563}
+      .login-input:focus{border-color:#f97316;box-shadow:0 0 0 4px rgba(249,115,22,0.1)}
+      .login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#f97316,#ea580c);color:white;font-weight:700;font-size:15px;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(249,115,22,0.4);transition:all 0.2s}
+      .login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(249,115,22,0.5)}
+      .login-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,107,26,0.2);backdrop-filter:blur(24px);border-radius:24px;padding:28px;box-shadow:0 24px 64px rgba(0,0,0,0.4)}
+      `}</style>
+      <div style={{width:'100%',maxWidth:'380px'}}>
+        <div style={{textAlign:'center',marginBottom:'32px'}}>
           <div className="mx-auto mb-5 relative w-28 h-28">
             <div className="w-28 h-28 rounded-3xl flex items-center justify-center shadow-2xl" style={{background:'linear-gradient(135deg,#1a0f08,#2d1a0a)',border:'1px solid rgba(249,115,22,0.3)'}}>
               <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -747,34 +756,34 @@ export default function App() {
             </div>
             <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-xl flex items-center justify-center" style={{background:'linear-gradient(135deg,#f97316,#ea580c)',boxShadow:'0 4px 12px rgba(249,115,22,0.5)'}}><Wrench size={14} className="text-white"/></div>
           </div>
-          <h1 className="font-display font-black text-3xl text-white tracking-tight">TallerMaster</h1>
-          <p className="text-slate-500 text-sm mt-1.5">Sistema de gestión de taller</p>
+          <h1 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'2rem',color:'white',letterSpacing:'-1px',margin:'16px 0 4px'}}>TallerMaster</h1>
+          <p style={{color:'#6b7280',fontSize:'13px',marginTop:'4px'}}>Sistema de gestión de taller</p>
         </div>
-        <div className="rounded-3xl p-7 space-y-4" style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,107,26,0.2)',backdropFilter:'blur(24px)',boxShadow:'0 24px 64px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.08)'}}>
+        <div className="login-card" style={{display:'flex',flexDirection:'column',gap:'16px'}}>
           <div>
-            <span className="lbl text-slate-400">Usuario</span>
+            <span style={{fontSize:'11px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'1px',display:'block',marginBottom:'5px'}}>Usuario</span>
             <div className="relative mt-1">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16}/>
-              <input className="w-full pl-10 pr-4 py-3 rounded-xl text-white outline-none transition-all" style={{background:'rgba(255,255,255,0.07)',border:'1.5px solid rgba(255,255,255,0.1)'}} placeholder="tu usuario" value={loginForm.username} onChange={e=>setLoginForm(f=>({...f,username:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&handleLogin()}/>
+              <input className="login-input" placeholder="tu usuario" value={loginForm.username} onChange={e=>setLoginForm(f=>({...f,username:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&handleLogin()}/>
             </div>
           </div>
           <div>
-            <span className="lbl text-slate-400">Contraseña</span>
+            <span style={{fontSize:'11px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'1px',display:'block',marginBottom:'5px'}}>Contraseña</span>
             <div className="relative mt-1">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16}/>
-              <input type={showPw?'text':'password'} className="w-full pl-10 pr-10 py-3 rounded-xl text-white outline-none transition-all" style={{background:'rgba(255,255,255,0.07)',border:'1.5px solid rgba(255,255,255,0.1)'}} placeholder="••••••••" value={loginForm.password} onChange={e=>setLoginForm(f=>({...f,password:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&handleLogin()}/>
+              <input type={showPw?'text':'password'} className="login-input" style={{paddingRight:'40px'}} placeholder="••••••••" value={loginForm.password} onChange={e=>setLoginForm(f=>({...f,password:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&handleLogin()}/>
               <button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">{showPw?<EyeOff size={16}/>:<Eye size={16}/>}</button>
             </div>
           </div>
-          {loginError&&<p className="text-red-400 text-sm font-bold text-center">{loginError}</p>}
+          {loginError&&<p style={{color:'#f87171',fontSize:'13px',fontWeight:700,textAlign:'center'}}>{loginError}</p>}
           <div className="flex items-center gap-3 cursor-pointer" onClick={()=>setRememberMe(!rememberMe)}>
             <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all" style={{background:rememberMe?'linear-gradient(135deg,#f97316,#ea580c)':'rgba(255,255,255,0.07)',border:rememberMe?'none':'1.5px solid rgba(255,255,255,0.15)'}}>
               {rememberMe&&<Check size={12} className="text-white"/>}
             </div>
-            <span className="text-slate-300 text-sm select-none">Recordarme en este dispositivo</span>
+            <span style={{color:'#cbd5e1',fontSize:'14px',userSelect:'none'}}>Recordarme en este dispositivo</span>
           </div>
-          <button onClick={handleLogin} className="w-full py-3.5 rounded-2xl font-bold text-white transition-all hover:-translate-y-0.5" style={{background:'linear-gradient(135deg,#f97316,#ea580c)',boxShadow:'0 4px 16px rgba(249,115,22,0.4)'}}>Ingresar</button>
-          <p className="text-slate-600 text-xs text-center">Usuario demo: <span className="text-slate-400 font-bold">francisco</span> / <span className="text-slate-400 font-bold">taller123</span></p>
+          <button onClick={handleLogin} className="login-btn">Ingresar</button>
+          <p style={{color:'#4b5563',fontSize:'12px',textAlign:'center'}}>Usuario demo: <span style={{color:'#94a3b8',fontWeight:700}}>francisco</span> / <span style={{color:'#94a3b8',fontWeight:700}}>taller123</span></p>
         </div>
       </div>
     </div>
@@ -844,7 +853,7 @@ export default function App() {
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(249,115,22,0.3);border-radius:4px}
 
         /* FLOATING NAV */
-        .floating-nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;border-radius:32px;padding:8px 12px;display:flex;align-items:center;gap:2px;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.1)}
+        .floating-nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:100;border-radius:32px;padding:8px 12px;display:flex;align-items:center;gap:2px;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.1)}
         .float-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border-radius:22px;border:none;cursor:pointer;transition:all 0.22s cubic-bezier(.4,0,.2,1);min-width:58px}
         .float-btn.active{background:linear-gradient(135deg,#ff6b1a,#e85510);box-shadow:0 4px 16px rgba(249,115,22,0.5)}
         .float-btn:not(.active){background:transparent}
@@ -964,12 +973,12 @@ export default function App() {
       {view==='dashboard'&&<nav className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 p-5 z-50" style={{background:dm?'#07090d':'#0c1018',borderRight:'1px solid rgba(255,255,255,0.06)',boxShadow:'4px 0 24px rgba(0,0,0,0.3)'}}>
         <div className="flex items-center gap-3 mb-5">
           <div className="p-2 rounded-xl flex-shrink-0" style={{background:'linear-gradient(135deg,#f97316,#ea580c)'}}><Wrench size={20} className="text-white"/></div>
-          <div><h1 className="text-white font-display font-black text-base leading-tight">TallerMaster</h1><p className="text-slate-500 text-xs">{tallerConfig.nombre}</p></div>
+          <div><h1 style={{color:'white',fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'15px',lineHeight:1.2}}>TallerMaster</h1><p style={{color:'#6b7280',fontSize:'11px'}}>{tallerConfig.nombre}</p></div>
         </div>
         {/* User badge */}
         <div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
           <div className="w-7 h-7 min-w-[28px] min-h-[28px] rounded-lg flex items-center justify-center text-white text-xs font-black flex-shrink-0" style={{background:'rgba(249,115,22,0.25)',border:'1px solid rgba(249,115,22,0.4)',color:'#f97316'}}>{(currentUser.name||'?')[0]}</div>
-          <div className="flex-1 min-w-0"><p className="text-slate-200 text-xs font-bold truncate">{currentUser.name}</p><p className="text-slate-500 text-[10px] capitalize">{currentUser.role}</p></div>
+          <div style={{flex:1,minWidth:0,overflow:'hidden'}}><p style={{color:'#e2e8f0',fontSize:'12px',fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser.name}</p><p style={{color:'#6b7280',fontSize:'10px',textTransform:'capitalize'}}>{currentUser.role}</p></div>
           <button onClick={handleLogout} className="text-slate-600 hover:text-red-400 transition-colors flex-shrink-0 p-1 rounded-lg hover:bg-red-500/10"><LogOut size={13}/></button>
         </div>
         <div className="relative mb-3">
@@ -978,7 +987,7 @@ export default function App() {
         </div>
         <div className="space-y-0.5 flex-1 overflow-y-auto">
           {[{id:'dashboard',Icon:LayoutDashboard,label:'Panel'},{id:'list',Icon:Box,label:'Inventario'},{id:'repairs',Icon:Car,label:'Servicios'},{id:'budgets',Icon:FileText,label:'Presupuestos'},{id:'clients',Icon:Users,label:'Clientes'},{id:'vehicles_list',Icon:Car,label:'Vehículos'},{id:'history',Icon:Clock,label:'Historial'},{id:'stock_history',Icon:History,label:'Mov. Stock'},{id:'stats',Icon:BarChart3,label:'Estadísticas'},{id:'ai_assistant',Icon:Sparkles,label:'Asistente IA'},{id:'config',Icon:Settings,label:'Configuración'},].map(({id,Icon,label})=>(
-            <button key={id} onClick={()=>{setView(id);setGlobalSearch('');}} className={`nav-item ${view===id?'active':''}`}><Icon size={16}/>{label}</button>
+            <button key={id} onClick={()=>{setView(id);setGlobalSearch('');}} className={`nav-item ${view===id?'active':''}`} style={view===id?{}:{color:'#9ca3af'}}><Icon size={16}/>{label}</button>
           ))}
         </div>
         <div className="flex items-center gap-2 mt-3">
@@ -1030,7 +1039,7 @@ export default function App() {
             else if(view==='clients') setView('add_client');
             else if(view==='vehicles_list') setView('add_vehicle');
           }}
-          className="fixed bottom-8 right-5 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95"
+          className="fixed bottom-28 right-5 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95"
           style={{background:'linear-gradient(135deg,#ff6b1a,#e85510)',boxShadow:'0 8px 28px rgba(249,115,22,0.55),0 0 0 4px rgba(249,115,22,0.15)'}}
         >
           <Plus size={26} className="text-white"/>
@@ -1045,15 +1054,15 @@ export default function App() {
         </div>
       )}
 
-      <main className={`p-4 md:p-8 max-w-4xl mx-auto ${view!=='dashboard'?'pt-16':''} ${['add','add_repair','edit_repair','add_budget','edit_budget','add_client','edit_client','add_vehicle','edit_vehicle','edit_product'].includes(view)?'pb-32':''}`}>
+      <main className={`p-4 md:p-8 max-w-4xl mx-auto pb-28 ${view!=='dashboard'?'pt-16 pb-32':'pb-28'}`}>
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(
           <div className="space-y-5 anim">
             <div className="flex justify-between items-center">
               <div>
-                <p className={`text-sm ${dm?'text-slate-400':'text-slate-500'}`}>Hola, {currentUser.name} 👋</p>
-                <h2 className={`page-title font-display ${dm?'text-white':'text-slate-900'}`}>{tallerConfig.nombre}</h2>
+                <p style={{fontSize:'14px',color:'#94a3b8',marginBottom:'2px'}}>Hola, {currentUser.name} 👋</p>
+                <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>{tallerConfig.nombre}</h2>
               </div>
               <div className="flex gap-2">
                 <button onClick={()=>setDarkMode(!dm)} className={`p-2.5 rounded-xl md:hidden border ${dm?'border-[#30363d] bg-[#161b22] text-white':'border-slate-200 bg-white text-slate-600'}`}>{dm?<Sun size={17}/>:<Moon size={17}/>}</button>

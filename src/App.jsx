@@ -227,7 +227,7 @@ export default function App() {
   // Login — checks Firebase users, falls back to DEFAULT_USERS
   const handleLogin = () => {
     const allUsers = tallerUsers.length > 0 ? tallerUsers : DEFAULT_USERS;
-    const u = allUsers.find(u=>u.username===loginForm.username&&u.password===loginForm.password);
+    const u = allUsers.find(u=>u.username.toLowerCase()===loginForm.username.toLowerCase().trim()&&u.password===loginForm.password.trim());
     if (u) {
       setCurrentUser(u);
       if (rememberMe) localStorage.setItem('tm_session', JSON.stringify(u));

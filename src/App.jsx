@@ -783,7 +783,9 @@ export default function App() {
             </div>
             <span style={{color:'#cbd5e1',fontSize:'14px',userSelect:'none'}}>Recordarme en este dispositivo</span>
           </div>
-          <button onClick={handleLogin} className="login-btn">Ingresar</button>
+          <button onClick={handleLogin} className="login-btn" disabled={!configLoaded} style={{opacity:configLoaded?1:0.6,cursor:configLoaded?'pointer':'not-allowed'}}>
+            {configLoaded?'Ingresar':'Cargando...'}
+          </button>
           <p style={{color:'#4b5563',fontSize:'12px',textAlign:'center'}}>Usuario demo: <span style={{color:'#94a3b8',fontWeight:700}}>francisco</span> / <span style={{color:'#94a3b8',fontWeight:700}}>taller123</span></p>
         </div>
       </div>

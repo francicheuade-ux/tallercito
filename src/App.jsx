@@ -111,7 +111,7 @@ export default function App() {
   // Config
   const [tallerConfig, setTallerConfig] = useState(DEFAULT_CONFIG);
   const [tallerUsers, setTallerUsers] = useState(DEFAULT_USERS);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('tm_dark') === '1');
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('tm_dark') !== '0');
   const [orderCounter, setOrderCounter] = useState(0);
   const [configLoaded, setConfigLoaded] = useState(false);
 
@@ -776,7 +776,13 @@ export default function App() {
     </div>
   );
 
-  if (loading || !configLoaded) return <div className="min-h-screen flex items-center justify-center" style={{background:'#0d1117'}}><Loader2 className="animate-spin text-orange-500" size={40}/></div>;
+  if (loading || !configLoaded) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{background:'linear-gradient(145deg,#0a0a0f,#12100e,#1a0f08)'}}>
+      <div className="p-4 rounded-2xl" style={{background:'linear-gradient(135deg,#f97316,#ea580c)'}}><Wrench size={28} className="text-white"/></div>
+      <Loader2 className="animate-spin text-orange-500" size={32}/>
+      <p className="text-slate-500 text-sm font-medium">Cargando TallerMaster...</p>
+    </div>
+  );
 
   // ── MAIN APP ──────────────────────────────────────────────────
   return (
@@ -823,11 +829,12 @@ export default function App() {
         .shutter-inner{width:56px;height:56px;border-radius:50%;background:white;border:2px solid #e2e8f0}
 
         /* ANIMATIONS */
-        @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        @keyframes pulse-ring{0%{transform:scale(1);opacity:1}100%{transform:scale(1.5);opacity:0}}
-        .anim{animation:slideUp 0.28s cubic-bezier(.4,0,.2,1)}
-        .fade{animation:fadeIn 0.2s ease-out}
+        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+        .anim{animation:slideUp 0.22s cubic-bezier(.22,1,.36,1)}
+        .fade{animation:fadeIn 0.18s ease-out}
+        .anim-fast{animation:slideUp 0.15s cubic-bezier(.22,1,.36,1)}
 
         /* SCROLLBAR */
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(249,115,22,0.3);border-radius:4px}
@@ -987,7 +994,7 @@ export default function App() {
         ].map(({id,Icon,label,primary})=>(
           <button key={id} onClick={()=>id==='scan'?startQRScan():setView(id)} className={`float-btn ${primary?'center-btn':view===id?'active':''}`}>
             <Icon size={primary?22:20} className={primary?'text-white':view===id?'text-white':dm?'text-slate-500':'text-slate-400'}/>
-            {!primary&&<span className="text-[9px] font-bold">{label}</span>}
+            {!primary&&<span className={`text-[9px] font-bold ${view===id?'text-white':dm?'text-slate-500':'text-slate-500'}`}>{label}</span>}
           </button>
         ))}
       </div>
@@ -1042,7 +1049,7 @@ export default function App() {
             <div className="flex justify-between items-center">
               <div>
                 <p className={`text-sm ${dm?'text-slate-400':'text-slate-500'}`}>Hola, {currentUser.name} 👋</p>
-                <h2 className="page-title font-display">{tallerConfig.nombre}</h2>
+                <h2 className={`page-title font-display ${dm?'text-white':'text-slate-900'}`}>{tallerConfig.nombre}</h2>
               </div>
               <div className="flex gap-2">
                 <button onClick={()=>setDarkMode(!dm)} className={`p-2.5 rounded-xl md:hidden border ${dm?'border-[#30363d] bg-[#161b22] text-white':'border-slate-200 bg-white text-slate-600'}`}>{dm?<Sun size={17}/>:<Moon size={17}/>}</button>
@@ -1298,7 +1305,7 @@ export default function App() {
             </div>
             {listMode==='grid'&&(
               <div className="grid grid-cols-2 gap-3">
-                {repairs.sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
+                {[...repairs].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
                   <div key={rep.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       {rep.orderNumber&&<span className="text-[10px] font-bold text-orange-500 font-mono">{rep.orderNumber}</span>}
@@ -1314,14 +1321,14 @@ export default function App() {
             )}
             {listMode==='list'&&(
             <div className="space-y-4">
-            {repairs.sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
+            {[...repairs].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
               <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                 {rep.imageUrl&&<img src={rep.imageUrl} alt="" className="w-full h-36 object-cover rounded-2xl mb-4"/>}
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       {rep.orderNumber&&<span className="text-xs font-bold text-orange-500 font-mono">{rep.orderNumber}</span>}
-                      <h4 className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle}</h4>
+                      <h4 className={`font-bold text-sm ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle}</h4>
                       {rep.plate&&<span className={`font-mono text-xs px-2 py-0.5 rounded-lg ${dm?'bg-[#0d1117] text-slate-400':'bg-slate-100 text-slate-500'}`}>{rep.plate}</span>}
                       <SPill status={rep.status||'pendiente'}/>
                     </div>
@@ -1371,7 +1378,7 @@ export default function App() {
             </div>
             {listMode==='grid'&&(
               <div className="grid grid-cols-2 gap-3">
-                {budgets.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
+                {[...budgets].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
                   const emp2=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
                   return (
                     <div key={budget.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
@@ -1384,7 +1391,7 @@ export default function App() {
                 })}
               </div>
             )}
-            {listMode==='list'&&budgets.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
+            {listMode==='list'&&[...budgets].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
               const emp=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
               return (
                 <div key={budget.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
@@ -1489,7 +1496,7 @@ export default function App() {
             <h2 className={`page-title font-display ${dm?'text-white':'text-slate-900'}`}>Historial Vehículo</h2>
             <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15}/><input className={`inp pl-9 ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="Patente o modelo..." value={vehicleFilter} onChange={e=>setVehicleFilter(e.target.value)}/></div>
             {vehicleFilter&&vehicleHistory.length===0&&<div className={`card card-s p-8 text-center text-sm ${dm?'bg-[#161b22] text-slate-500':'bg-white text-slate-400'}`}>Sin registros para "{vehicleFilter}"</div>}
-            {vehicleHistory.sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
+            {[...vehicleHistory].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
               <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                 <div className="flex justify-between items-start mb-1">
                   <div><h4 className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle} <span className="font-mono text-sm text-slate-400">{rep.plate}</span></h4>
@@ -1857,11 +1864,11 @@ export default function App() {
 function SPill({status}){const c=STATUS_CONFIG[status]||STATUS_CONFIG.pendiente;return<span className={`status-pill ${c.tw}`}><span className={`w-1.5 h-1.5 rounded-full ${c.dot}`}/>{c.icon} {c.label}</span>;}
 function PayBadge({status}){const c=PAYMENT_CONFIG[status]||PAYMENT_CONFIG.debe;return<span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{background:c.bg,color:c.color}}>{c.icon} {c.label}</span>;}
 function SSection({title,children,dm}){return<div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}><p className="lbl mb-3">{title}</p>{children}</div>;}
-function EC({icon,text,dm,className=''}){return<div className={`card card-s p-16 text-center ${dm?'bg-[#161b22] text-slate-500':'bg-white text-slate-400'} ${className}`}><div className="mx-auto mb-3 opacity-20 flex justify-center">{icon}</div><p>{text}</p></div>;}
+function EC({icon,text,dm,className=''}){return<div className={`card card-s p-12 text-center ${dm?'bg-[#161b22] card-dark text-slate-500':'bg-white text-slate-400'} ${className}`}><div className="mx-auto mb-3 opacity-20 flex justify-center">{icon}</div><p className="text-sm font-medium">{text}</p></div>;}
 function DangerBtn({onClick}){return<button onClick={onClick} className="p-2.5 rounded-xl text-red-400 border" style={{borderColor:'rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.08)'}}><Trash2 size={16}/></button>;}
 
 function FCard({children,title,onCancel,dm,onSubmit}){
-  return<form onSubmit={onSubmit} className={`card card-s p-6 space-y-4 max-w-xl mx-auto anim ${dm?'bg-[#161b22]':'bg-white'}`}>
+  return<form onSubmit={onSubmit} className={`card card-s p-5 md:p-6 space-y-4 max-w-xl mx-auto anim ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
     <div className="flex items-center gap-3"><button type="button" onClick={onCancel} className={`p-2 rounded-xl ${dm?'bg-[#0d1117] text-slate-300':'bg-slate-100 text-slate-700'}`}><ChevronLeft size={18}/></button><h2 className={`font-display font-black text-xl ${dm?'text-white':'text-slate-900'}`}>{title}</h2></div>
     {children}
   </form>;
@@ -1970,14 +1977,8 @@ function ProdForm({isEdit,data,setData,onSubmit,onCancel,dm,sc,cats=[]}){
     <FInp label="Nombre *" required placeholder="Filtro de aceite" value={data.name||''} onChange={e=>setData(f=>({...f,name:e.target.value}))} dm={dm}/>
     <FInp label="Descripción" placeholder="Marca, modelo..." value={data.description||''} onChange={e=>setData(f=>({...f,description:e.target.value}))} dm={dm}/>
     {data.barcode&&<div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{background:'rgba(249,115,22,0.1)',border:'1px solid rgba(249,115,22,0.2)'}}><QrCode size={14} className="text-orange-500"/><span className="text-xs font-bold text-orange-500">Código: </span><span className="font-mono text-xs">{data.barcode}</span></div>}
-    <CatSelect data={data} setData={setData} categories={categories} dm={dm}/>
     <FInp label="Ubicación" placeholder="Estante A, Cajón 2" value={data.location||''} onChange={e=>setData(f=>({...f,location:e.target.value}))} dm={dm}/>
-    <div><span className="lbl">Categoría</span>
-      <select className={`inp ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} value={data.categoryId||''} onChange={e=>setData(f=>({...f,categoryId:e.target.value}))}>
-        <option value="">Sin categoría</option>
-        {cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-      </select>
-    </div>
+    <CatSelect data={data} setData={setData} categories={cats} dm={dm}/>
     <div className="grid grid-cols-2 gap-3">
       <FInp label="Proveedor" placeholder="Dist. X" value={data.supplier||''} onChange={e=>setData(f=>({...f,supplier:e.target.value}))} dm={dm}/>
       <FInp label="Tel. proveedor" placeholder="11-xxxx" value={data.supplierPhone||''} onChange={e=>setData(f=>({...f,supplierPhone:e.target.value}))} dm={dm}/>

@@ -902,20 +902,22 @@ export default function App() {
       {/* QR MODAL — bottom sheet style */}
       {showQRModal&&scannedProduct&&(
         <div className="modal-overlay" onClick={()=>setShowQRModal(false)}>
-          <div className={`modal-sheet ${dm?'bg-[#161b22]':'bg-white'} anim w-full`} onClick={e=>e.stopPropagation()}>
-            <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{background:dm?'#30363d':'#e2e8f0'}}/>
-            <div className="flex justify-between items-start mb-4">
-              <div><p className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-1">Escaneado</p>
-                <h3 className={`font-display font-black text-xl ${dm?'text-white':''}`}>{scannedProduct.name}</h3>
-                <p className="font-mono text-xs text-slate-400 mt-0.5">{scannedProduct.sku}</p></div>
-              <button onClick={()=>setShowQRModal(false)} className={`p-2 rounded-xl ${dm?'hover:bg-[#0d1117]':'hover:bg-slate-100'}`}><X size={18}/></button>
+          <div className="modal-sheet anim w-full" style={{background:'#161b22'}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:'40px',height:'4px',borderRadius:'9999px',background:'#30363d',margin:'0 auto 20px'}}/>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'16px'}}>
+              <div>
+                <p style={{fontSize:'10px',fontWeight:700,color:'#f97316',textTransform:'uppercase',letterSpacing:'2px',marginBottom:'4px'}}>Escaneado</p>
+                <h3 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'20px',color:'white'}}>{scannedProduct.name}</h3>
+                <p style={{fontFamily:'monospace',fontSize:'11px',color:'#6b7280',marginTop:'2px'}}>{scannedProduct.sku}</p>
+              </div>
+              <button onClick={()=>setShowQRModal(false)} style={{padding:'8px',borderRadius:'12px',background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer',color:'#9ca3af'}}><X size={18}/></button>
             </div>
             {scannedProduct.imageUrl&&<img src={scannedProduct.imageUrl} alt="" className="w-full h-36 object-contain rounded-2xl mb-4"/>}
             <div className="grid grid-cols-3 gap-3 mb-4">
               {[{label:'Stock',val:scannedProduct.quantity,red:scannedProduct.quantity<=scannedProduct.minStock},{label:'Costo',val:`$${Number(scannedProduct.cost).toLocaleString()}`},{label:'Ubic.',val:scannedProduct.location||'—'}].map(({label,val,red})=>(
-                <div key={label} className={`rounded-2xl p-3 text-center ${dm?'bg-[#0d1117]':'bg-slate-50'}`}>
-                  <p className={`text-lg font-black font-display truncate ${red?'text-red-500':''}`}>{val}</p>
-                  <p className="text-xs text-slate-400 font-bold uppercase">{label}</p>
+                <div key={label} style={{background:'#0d1117',borderRadius:'16px',padding:'12px',textAlign:'center'}}>
+                  <p style={{fontSize:'18px',fontWeight:900,fontFamily:"'Outfit',sans-serif",color:red?'#ef4444':'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{val}</p>
+                  <p style={{fontSize:'10px',color:'#6b7280',fontWeight:700,textTransform:'uppercase',marginTop:'2px'}}>{label}</p>
                 </div>
               ))}
             </div>
@@ -925,8 +927,8 @@ export default function App() {
               <button onClick={()=>setQrQty(q=>Math.min(scannedProduct.quantity,q+1))} className={`p-2 rounded-xl ${dm?'bg-[#161b22]':'bg-white'} shadow`}><PlusCircle className="text-emerald-500" size={20}/></button>
             </div>
             {!qrAction&&<div className="grid grid-cols-2 gap-3">
-              <button onClick={()=>setQrAction('deduct')} className={`${dm?'bg-[#0d1117]':'bg-slate-50'} rounded-2xl p-4 flex flex-col items-center gap-2 cursor-pointer hover:shadow-md transition-all`}><MinusCircle size={22} className="text-red-500"/><span className="font-bold text-sm">Restar stock</span></button>
-              <button onClick={()=>setQrAction('service')} className={`${dm?'bg-[#0d1117]':'bg-slate-50'} rounded-2xl p-4 flex flex-col items-center gap-2 cursor-pointer hover:shadow-md transition-all`}><Car size={22} className="text-blue-500"/><span className="font-bold text-sm">A servicio</span></button>
+              <button onClick={()=>setQrAction('deduct')} style={{background:'#0d1117',borderRadius:'16px',padding:'16px',display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',cursor:'pointer',border:'none'}}><MinusCircle size={22} color="#ef4444"/><span style={{fontWeight:700,fontSize:'13px',color:'white'}}>Restar stock</span></button>
+              <button onClick={()=>setQrAction('service')} style={{background:'#0d1117',borderRadius:'16px',padding:'16px',display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',cursor:'pointer',border:'none'}}><Car size={22} color="#3b82f6"/><span style={{fontWeight:700,fontSize:'13px',color:'white'}}>A servicio</span></button>
             </div>}
             {qrAction==='deduct'&&<div className="space-y-3"><p className="text-sm font-bold">Restar <span className="text-red-500">{qrQty}</span> unidad(es)</p><div className="flex gap-2"><button onClick={()=>setQrAction(null)} className={`btn-ghost flex-1 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}>Volver</button><button onClick={handleQRDeduct} className="btn-primary flex-1" style={{background:'linear-gradient(135deg,#ef4444,#dc2626)'}}><Check size={16}/>Confirmar</button></div></div>}
             {qrAction==='service'&&<div className="space-y-3"><span className="lbl">Servicio activo</span><select className={`inp ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} value={selectedRepairForQR} onChange={e=>setSelectedRepairForQR(e.target.value)}><option value="">— Elegí —</option>{repairs.filter(r=>r.status!=='entregado').map(r=><option key={r.id} value={r.id}>{r.vehicle} {r.plate&&`· ${r.plate}`}</option>)}</select><div className="flex gap-2"><button onClick={()=>setQrAction(null)} className={`btn-ghost flex-1 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}>Volver</button><button onClick={handleQRAddToService} disabled={!selectedRepairForQR} className="btn-primary flex-1"><Check size={16}/>Agregar</button></div></div>}
@@ -1852,17 +1854,17 @@ export default function App() {
               </div>
             </div>
             {/* Controls */}
-            <div className="pb-12 px-8 space-y-4">
-              <p className="text-slate-400 text-center text-xs">Apuntá al código QR o código de barras</p>
+            <div style={{paddingBottom:'110px',paddingLeft:'32px',paddingRight:'32px',paddingTop:'8px',display:'flex',flexDirection:'column',gap:'12px'}}>
+              <p style={{color:'#6b7280',textAlign:'center',fontSize:'12px'}}>Apuntá al código QR o código de barras</p>
               {/* Zoom slider */}
-              <div className="flex items-center gap-3">
-                <span className="text-white text-xs font-bold w-6 text-center">1x</span>
+              <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                <span style={{color:'white',fontSize:'11px',fontWeight:700,width:'24px',textAlign:'center'}}>1x</span>
                 <input type="range" min="1" max="4" step="0.5" value={zoomLevel} onChange={e=>{
                   const z=Number(e.target.value);
                   setZoomLevel(z);
                   try{ qrInstanceRef.current?.applyVideoConstraints({zoom:z}); }catch{}
-                }} className="flex-1 accent-orange-500" style={{accentColor:'#f97316'}}/>
-                <span className="text-white text-xs font-bold w-6 text-center">{zoomLevel}x</span>
+                }} style={{flex:1,accentColor:'#f97316'}}/>
+                <span style={{color:'white',fontSize:'11px',fontWeight:700,width:'24px',textAlign:'center'}}>{zoomLevel}x</span>
               </div>
             </div>
           </div>

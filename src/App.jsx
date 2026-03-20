@@ -409,28 +409,60 @@ export default function App() {
   // CRUD Repairs
   const saveRepair = async e => {
     e.preventDefault();
-    const batch=writeBatch(db);
-    const orderNum=await nextOrder();
-    const ref=doc(collection(db,'artifacts',appId,'public','data','repairs'));
-    const partsCost=newRepair.partsUsed.reduce((s,p)=>s+(p.cost*p.qty),0);
-    const total=partsCost+Number(newRepair.laborCost);
-    batch.set(ref,{...newRepair,orderNumber:orderNum,date:serverTimestamp(),totalCost:total,partsCost,laborCost:Number(newRepair.laborCost),createdBy:currentUser?.name});
-    newRepair.partsUsed.forEach(part=>{
-      const orig=inventory.find(i=>i.id===part.id);
-      if(orig) batch.update(doc(db,'artifacts',appId,'public','data','inventory',part.id),{quantity:Math.max(0,orig.quantity-part.qty)});
-    });
-    await batch.commit();
-    for(const part of newRepair.partsUsed) await logStock(part.id,part.name,-part.qty,`Servicio ${orderNum}`);
-    setNewRepair(EMPTY_REPAIR); setClientSearch(''); setView('repairs'); showNotif(`✓ ${orderNum} creado`);
+    try {
+      const orderNum = await nextOrder();
+      const batch = writeBatch(db);
+      const ref = doc(collection(db,'artifacts',appId,'public','data','repairs'));
+      const partsCost = (newRepair.partsUsed||[]).reduce((s,p)=>s+(p.cost*p.qty),0);
+      const total = partsCost + Number(newRepair.laborCost||0);
+      // Clean data - remove undefined values that Firestore rejects
+      const repairData = {
+        vehicle: newRepair.vehicle||'',
+        plate: newRepair.plate||'',
+        km: newRepair.km||'',
+        clientId: newRepair.clientId||'',
+        clientName: newRepair.clientName||'',
+        description: newRepair.description||'',
+        notes: newRepair.notes||'',
+        imageUrl: newRepair.imageUrl||'',
+        partsUsed: newRepair.partsUsed||[],
+        laborCost: Number(newRepair.laborCost||0),
+        status: newRepair.status||'pendiente',
+        paymentStatus: newRepair.paymentStatus||'debe',
+        payments: [],
+        orderNumber: orderNum,
+        date: serverTimestamp(),
+        totalCost: total,
+        partsCost,
+        createdBy: currentUser?.name||'',
+      };
+      batch.set(ref, repairData);
+      (newRepair.partsUsed||[]).forEach(part=>{
+        const orig = inventory.find(i=>i.id===part.id);
+        if(orig) batch.update(doc(db,'artifacts',appId,'public','data','inventory',part.id),{quantity:Math.max(0,orig.quantity-part.qty)});
+      });
+      await batch.commit();
+      for(const part of (newRepair.partsUsed||[])) await logStock(part.id,part.name,-part.qty,`Servicio ${orderNum}`);
+      setNewRepair(EMPTY_REPAIR); setClientSearch(''); setView('repairs'); showNotif(`✓ ${orderNum} creado`);
+    } catch(err) {
+      console.error('saveRepair error:', err);
+      showNotif(`Error al guardar: ${err.message}`,'error');
+    }
   };
   const updateRepair = async e => {
     e.preventDefault();
-    const partsCost=editingRepair.partsUsed.reduce((s,p)=>s+(p.cost*p.qty),0);
-    const total=partsCost+Number(editingRepair.laborCost);
     try {
-      await updateDoc(doc(db,'artifacts',appId,'public','data','repairs',editingRepair.id),{...editingRepair,totalCost:total,partsCost,laborCost:Number(editingRepair.laborCost),updatedBy:currentUser?.name});
+      const partsCost=(editingRepair.partsUsed||[]).reduce((s,p)=>s+(p.cost*p.qty),0);
+      const total=partsCost+Number(editingRepair.laborCost||0);
+      await updateDoc(doc(db,'artifacts',appId,'public','data','repairs',editingRepair.id),{
+        ...editingRepair,
+        totalCost:total,
+        partsCost,
+        laborCost:Number(editingRepair.laborCost||0),
+        updatedBy:currentUser?.name||''
+      });
       setEditingRepair(null); setClientSearch(''); setView('repairs'); showNotif("✓ Actualizado");
-    } catch { showNotif("Error","error"); }
+    } catch(err) { showNotif(`Error: ${err.message}`,"error"); }
   };
   const updateRepairField = async (id,field,value) => { await updateDoc(doc(db,'artifacts',appId,'public','data','repairs',id),{[field]:value}); };
 
@@ -1879,7 +1911,7 @@ function DangerBtn({onClick}){return<button onClick={onClick} className="p-2.5 r
 
 function FCard({children,title,onCancel,dm,onSubmit}){
   return<form onSubmit={onSubmit} className={`card card-s p-6 space-y-4 max-w-xl mx-auto anim ${dm?'bg-[#161b22]':'bg-white'}`}>
-    <div className="flex items-center gap-3"><button type="button" onClick={onCancel} className={`p-2 rounded-xl ${dm?'bg-[#0d1117]':'bg-slate-100'}`}><ChevronLeft size={18}/></button><h2 className="font-display font-black text-xl">{title}</h2></div>
+    <div className="flex items-center gap-3"><button type="button" onClick={onCancel} className={`p-2 rounded-xl ${dm?'bg-[#0d1117] text-slate-300':'bg-slate-100 text-slate-700'}`}><ChevronLeft size={18}/></button><h2 className={`font-display font-black text-xl ${dm?'text-white':'text-slate-900'}`}>{title}</h2></div>
     {children}
   </form>;
 }

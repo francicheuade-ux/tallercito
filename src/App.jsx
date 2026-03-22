@@ -54,7 +54,7 @@ const DEFAULT_CONFIG = {
 const DEFAULT_USERS = [{ id:'1', name:'Francisco', username:'francisco', password:'taller123', role:'admin', color:'#f97316' }];
 
 const EMPTY_REPAIR = { vehicle:'', plate:'', km:'', clientId:'', clientName:'', description:'', partsUsed:[], laborCost:0, status:'pendiente', paymentStatus:'debe', imageUrl:'', notes:'', orderNumber:'', payments:[] };
-const EMPTY_BUDGET = { clientId:'', clientName:'', clientPhone:'', vehicle:'', plate:'', km:'', description:'', partsUsed:[], laborCost:0, notes:'', date:new Date().toISOString().split('T')[0], empresaId:'1' };
+const EMPTY_BUDGET = { clientId:'', clientName:'', clientPhone:'', vehicle:'', plate:'', km:'', description:'', partsUsed:[], laborCost:0, notes:'', date:new Date().toISOString().split('T')[0], empresaId:'1', budgetNumber:'' };
 const EMPTY_CLIENT = { name:'', phone:'', email:'', vehicles:[] };
 const EMPTY_VEHICLE = { make:'', model:'', year:'', plate:'', km:'', clientId:'', clientName:'' };
 const EMPTY_PRODUCT = { name:'', sku:'', barcode:'', location:'', quantity:0, minStock:1, cost:0, salePrice:0, imageUrl:'', description:'', supplier:'', supplierPhone:'', categoryId:'' };
@@ -113,6 +113,7 @@ export default function App() {
   const [tallerUsers, setTallerUsers] = useState(DEFAULT_USERS);
   const [darkMode, setDarkMode] = useState(true); // Always dark mode
   const [orderCounter, setOrderCounter] = useState(0);
+  const [budgetCounter, setBudgetCounter] = useState(0);
   const [configLoaded, setConfigLoaded] = useState(false);
 
   // Firebase
@@ -234,6 +235,7 @@ export default function App() {
         if (d.tallerConfig) setTallerConfig(d.tallerConfig);
         if (d.tallerUsers) setTallerUsers(d.tallerUsers);
         if (d.orderCounter !== undefined) setOrderCounter(d.orderCounter);
+        if (d.budgetCounter !== undefined) setBudgetCounter(d.budgetCounter);
       }
       setConfigLoaded(true);
     }, () => setConfigLoaded(true));
@@ -301,7 +303,7 @@ export default function App() {
             window.Html5QrcodeSupportedFormats?.UPC_A,
             window.Html5QrcodeSupportedFormats?.UPC_E,
           ].filter(Boolean);
-          await qr.start({facingMode:"environment"},{fps:10,qrbox:{width:280,height:160},formatsToSupport:formats.length>0?formats:undefined},
+          await qr.start({facingMode:"environment"},{fps:30,qrbox:{width:250,height:150},formatsToSupport:formats.length>0?formats:undefined,aspectRatio:1.5,videoConstraints:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}}},
             text=>{
               const found=inventory.find(p=>p.sku===text||p.id===text||p.barcode===text);
               playBeep();
@@ -322,6 +324,15 @@ export default function App() {
     }
     return ()=>{if(qr?.isScanning)qr.stop().catch(()=>{});}; 
   },[view,inventory,showNotif]);
+
+  // Budget number
+  const nextBudgetNumber = async () => {
+    const n = budgetCounter + 1;
+    setBudgetCounter(n);
+    try { await updateDoc(doc(db,'artifacts',appId,'public','appconfig'), {budgetCounter: n}); }
+    catch { try { await setDoc(doc(db,'artifacts',appId,'public','appconfig'), {budgetCounter:n}, {merge:true}); } catch{} }
+    return String(n).padStart(4,'0');
+  };
 
   // Order — counter saved in Firebase
   const nextOrder = async () => {
@@ -630,7 +641,7 @@ export default function App() {
     </style></head><body>
     <div class="header">
       <div><h1>${empresa.nombre}</h1><p class="sub">${empresa.direccion}<br>${empresa.telefono} · ${empresa.email}</p>${empresa.cuit?`<p class="cuit">CUIT: ${empresa.cuit}</p>`:''}</div>
-      <div><div class="doc-title">Presupuesto</div><div class="date">Fecha: ${dateStr}</div></div>
+      <div><div class="doc-title">Presupuesto${budget.budgetNumber?` #${budget.budgetNumber}`:''}</div><div class="date">Fecha: ${dateStr}</div></div>
     </div>
     <div class="sec"><div class="sec-title">Cliente</div><div class="grid">
     <div class="item"><label>Nombre</label><span>${budget.clientName}</span></div>
@@ -650,7 +661,10 @@ export default function App() {
     ${budget.notes?`<div class="notes">📝 ${budget.notes}</div>`:''}
     <div class="footer"><p>${empresa.nombre} · ${empresa.telefono}</p><span class="validity">✓ Válido 15 días</span></div>
     </body></html>`);
-    win.document.close(); win.print();
+    win.document.close();
+    win.focus();
+    win.print();
+    win.onafterprint = () => { win.close(); };
   };
 
   const printWorkOrder = repair => {
@@ -705,7 +719,10 @@ export default function App() {
       <div class="firma-box">Firma del mecánico</div>
     </div>
     </body></html>`);
-    win.document.close(); win.print();
+    win.document.close();
+    win.focus();
+    win.print();
+    win.onafterprint = () => { win.close(); };
   };
 
   const printQRLabel = product => {
@@ -838,8 +855,8 @@ export default function App() {
         /* BUTTONS */
         .btn-primary{background:linear-gradient(135deg,#ff6b1a,#e85510);color:white;padding:13px 20px;border-radius:13px;font-weight:700;display:flex;align-items:center;gap:8px;justify-content:center;cursor:pointer;border:none;width:100%;font-size:15px;box-shadow:0 4px 20px rgba(249,115,22,0.4),0 1px 3px rgba(0,0,0,0.2);transition:all 0.2s;letter-spacing:0.2px}
         .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(249,115,22,0.5)}.btn-primary:disabled{opacity:0.45;transform:none;cursor:not-allowed}
-        .btn-dark{background:#1e293b;color:#f8fafc;padding:9px 16px;border-radius:11px;font-weight:700;display:flex;align-items:center;gap:6px;justify-content:center;cursor:pointer;border:none;font-size:13px;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.2)}.btn-dark:hover{background:#334155}
-        .btn-ghost{padding:9px 14px;border-radius:11px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;transition:all 0.2s;border:2px solid}
+        .btn-dark{background:#1e293b;color:#f8fafc;padding:9px 16px;border-radius:13px;font-weight:700;display:flex;align-items:center;gap:6px;justify-content:center;cursor:pointer;border:none;font-size:13px;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.2)}.btn-dark:hover{background:#334155}
+        .btn-ghost{padding:9px 14px;border-radius:13px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;transition:all 0.2s;border:2px solid}
 
         /* LABELS & STATUS */
         .lbl{font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;display:block}
@@ -1060,7 +1077,7 @@ export default function App() {
             else if(view==='clients') setView('add_client');
             else if(view==='vehicles_list') setView('add_vehicle');
           }}
-          className="fixed bottom-28 right-5 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95"
+          className="fixed bottom-32 right-5 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95"
           style={{background:'linear-gradient(135deg,#ff6b1a,#e85510)',boxShadow:'0 8px 28px rgba(249,115,22,0.55),0 0 0 4px rgba(249,115,22,0.15)'}}
         >
           <Plus size={26} className="text-white"/>
@@ -1075,116 +1092,91 @@ export default function App() {
         </div>
       )}
 
-      <main className={`p-4 md:p-8 max-w-4xl mx-auto pb-28 ${view!=='dashboard'?'pt-16 pb-32':'pb-28'}`}>
+      <main className={`p-4 md:p-8 max-w-4xl mx-auto ${view==='dashboard'?'pb-32':'pt-16 pb-36'}`}>
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(
-          <div className="space-y-5 anim">
-            <div className="flex justify-between items-center">
-              <div>
-                <p style={{fontSize:'14px',color:'#94a3b8',marginBottom:'2px'}}>Hola, {currentUser.name} 👋</p>
-                <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>{tallerConfig.nombre}</h2>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={()=>setDarkMode(!dm)} className={`p-2.5 rounded-xl md:hidden border ${dm?'border-[#30363d] bg-[#161b22] text-white':'border-slate-200 bg-white text-slate-600'}`}>{dm?<Sun size={17}/>:<Moon size={17}/>}</button>
-              </div>
+          <div className="space-y-6 anim">
+
+            {/* HEADER */}
+            <div className="pt-2">
+              <p style={{fontSize:'13px',color:'#6b7280'}}>Hola, {currentUser.name} 👋</p>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'28px',letterSpacing:'-1px',color:'white',marginTop:'2px'}}>{tallerConfig.nombre}</h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                {label:'Repuestos',value:inventory.length,from:'#3b82f6',to:'#2563eb',Icon:Package},
-                {label:'Activos',value:repairs.filter(r=>r.status!=='entregado').length,from:'#8b5cf6',to:'#7c3aed',Icon:Car},
-                {label:'Stock bajo',value:inventory.filter(p=>p.quantity<=p.minStock).length,from:'#ef4444',to:'#dc2626',Icon:AlertCircle},
-                {label:'Por cobrar',value:`$${repairs.filter(r=>r.paymentStatus==='debe').reduce((s,r)=>s+(r.totalCost||0),0).toLocaleString()}`,from:'#f59e0b',to:'#d97706',Icon:CreditCard},
-              ].map(({label,value,from,to,Icon})=>(
-                <div key={label} className="g-card text-white" style={{background:`linear-gradient(140deg,${from},${to})`,boxShadow:`0 8px 24px ${from}55`}}>
-                  <div className="flex justify-between items-start mb-3"><Icon size={20} className="opacity-80"/><div className="w-8 h-8 rounded-full flex items-center justify-center" style={{background:'rgba(255,255,255,0.15)'}}><Icon size={13}/></div></div>
-                  <p className="text-3xl font-display font-black leading-none">{value}</p>
-                  <p className="text-xs font-bold opacity-60 uppercase tracking-widest mt-2">{label}</p>
-                </div>
-              ))}
-            </div>
+
+            {/* ACCIONES RÁPIDAS — grandes y claras */}
             <div className="grid grid-cols-3 gap-3">
-              {[{label:'Servicio',Icon:Wrench,action:'add_repair'},{label:'Presupuesto',Icon:FileText,action:'add_budget'},{label:'Repuesto',Icon:Plus,action:'add'}].map(({label,Icon,action})=>(
-                <button key={action} onClick={()=>setView(action)} className={`card card-s card-hover p-4 text-left w-full ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-                  <div className="p-2.5 rounded-xl mb-3 inline-block" style={{background:'linear-gradient(135deg,#ff6b1a22,#ff6b1a11)',border:'1px solid rgba(249,115,22,0.2)'}}><Icon size={19} className="text-orange-500"/></div>
-                  <p className={`font-bold text-sm ${dm?'text-white':'text-slate-800'}`}>+ {label}</p>
+              {[
+                {label:'Nuevo servicio',Icon:Wrench,action:'add_repair',color:'#f97316'},
+                {label:'Presupuesto',Icon:FileText,action:'add_budget',color:'#3b82f6'},
+                {label:'Repuesto',Icon:Package,action:'add',color:'#10b981'},
+              ].map(({label,Icon,action,color})=>(
+                <button key={action} onClick={()=>setView(action)} style={{background:'rgba(255,255,255,0.04)',border:`1px solid rgba(255,255,255,0.07)`,borderRadius:'20px',padding:'20px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:'10px',cursor:'pointer',transition:'all 0.2s',WebkitTapHighlightColor:'transparent'}}
+                  onTouchStart={e=>e.currentTarget.style.background='rgba(255,255,255,0.08)'}
+                  onTouchEnd={e=>e.currentTarget.style.background='rgba(255,255,255,0.04)'}>
+                  <div style={{width:'44px',height:'44px',borderRadius:'14px',background:`${color}22`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <Icon size={20} color={color}/>
+                  </div>
+                  <span style={{fontSize:'11px',fontWeight:700,color:'#9ca3af',textAlign:'center',lineHeight:1.3}}>{label}</span>
                 </button>
               ))}
             </div>
-            {chartData.some(d=>d.total>0)&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-                <p className={`font-display font-bold mb-4 text-sm ${dm?'text-white':'text-slate-800'}`}>Ingresos — últimos 6 meses</p>
-                <div className="flex items-end gap-2 h-28">
-                  {chartData.map((d,i)=>(
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      {d.total>0&&<p className="text-[10px] font-bold text-orange-500">${(d.total/1000).toFixed(0)}k</p>}
-                      <div className="w-full rounded-t-xl" style={{height:`${(d.total/chartMax)*84}px`,minHeight:d.total>0?'4px':'0',background:i===5?'linear-gradient(180deg,#f97316,#ea580c)':dm?'#21262d':'#e2e8f0',transition:'height 0.5s'}}/>
-                      <p className={`text-[10px] font-bold ${dm?'text-slate-600':'text-slate-400'}`}>{d.month}</p>
-                    </div>
-                  ))}
-                </div>
+
+            {/* STATS — 2 números clave */}
+            <div className="grid grid-cols-2 gap-3">
+              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'20px',padding:'20px'}}>
+                <p style={{fontSize:'11px',color:'#6b7280',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:'8px'}}>Activos</p>
+                <p style={{fontSize:'36px',fontWeight:900,fontFamily:"'Outfit',sans-serif",color:'white',lineHeight:1}}>{repairs.filter(r=>r.status!=='entregado').length}</p>
+                <p style={{fontSize:'11px',color:'#6b7280',marginTop:'4px'}}>servicios en curso</p>
               </div>
-            )}
+              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'20px',padding:'20px'}}>
+                <p style={{fontSize:'11px',color:'#6b7280',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:'8px'}}>Por cobrar</p>
+                <p style={{fontSize:'28px',fontWeight:900,fontFamily:"'Outfit',sans-serif",color:'#f97316',lineHeight:1}}>${repairs.filter(r=>r.paymentStatus==='debe').reduce((s,r)=>s+(r.totalCost||0),0).toLocaleString()}</p>
+                <p style={{fontSize:'11px',color:'#6b7280',marginTop:'4px'}}>{repairs.filter(r=>r.paymentStatus==='debe').length} servicios</p>
+              </div>
+            </div>
+
+            {/* SERVICIOS ACTIVOS — compacto */}
             {repairs.filter(r=>r.status!=='entregado').length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-                <div className="flex justify-between items-center mb-4"><p className="font-display font-bold text-sm">Servicios activos</p><button onClick={()=>setView('repairs')} className="text-xs text-orange-500 font-bold">Ver todos →</button></div>
-                {repairs.filter(r=>r.status!=='entregado').slice(0,4).map(rep=>(
-                  <div key={rep.id} className={`flex items-center justify-between py-2.5 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}>
+              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'20px',overflow:'hidden'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 20px 12px'}}>
+                  <span style={{fontSize:'12px',fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'1px'}}>En el taller</span>
+                  <button onClick={()=>setView('repairs')} style={{fontSize:'12px',color:'#f97316',fontWeight:700,background:'none',border:'none',cursor:'pointer'}}>Ver todos →</button>
+                </div>
+                {repairs.filter(r=>r.status!=='entregado').slice(0,3).map((rep,i,arr)=>(
+                  <div key={rep.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 20px',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
                     <div>
-                      <div className="flex items-center gap-2">
-                        {rep.orderNumber&&<span className="text-xs font-bold text-orange-500 font-mono">{rep.orderNumber}</span>}
-                        <p className="font-bold text-sm">{rep.vehicle}</p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-xs text-slate-400">{rep.createdBy||'—'}</p>
-                        <PayBadge status={rep.paymentStatus||'debe'}/>
-                      </div>
+                      <p style={{fontWeight:700,fontSize:'14px',color:'white'}}>{rep.vehicle}</p>
+                      <p style={{fontSize:'11px',color:'#6b7280',marginTop:'2px'}}>{rep.orderNumber&&`${rep.orderNumber} · `}{rep.plate||rep.clientName||'—'}</p>
                     </div>
                     <SPill status={rep.status||'pendiente'}/>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* ALERTAS — solo si hay stock bajo */}
             {inventory.filter(p=>p.quantity<=p.minStock).length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'4px solid #ef4444'}}>
-                <p className="font-bold text-red-500 flex items-center gap-2 text-sm mb-3"><AlertCircle size={14}/>Stock bajo</p>
-                {inventory.filter(p=>p.quantity<=p.minStock).map(p=>(
-                  <div key={p.id} className={`flex justify-between text-sm py-1.5 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}><span className={`font-medium ${dm?'text-white':'text-slate-800'}`}>{p.name}</span><span className="font-black text-red-500">{p.quantity} un.</span></div>
-                ))}
-              </div>
+              <button onClick={()=>setView('list')} style={{width:'100%',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:'16px',padding:'14px 18px',display:'flex',justifyContent:'space-between',alignItems:'center',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                  <AlertCircle size={16} color="#ef4444"/>
+                  <span style={{fontSize:'13px',fontWeight:700,color:'#ef4444'}}>{inventory.filter(p=>p.quantity<=p.minStock).length} repuesto{inventory.filter(p=>p.quantity<=p.minStock).length>1?'s':''} con stock bajo</span>
+                </div>
+                <span style={{fontSize:'12px',color:'#6b7280'}}>Ver →</span>
+              </button>
             )}
 
-            {/* FACTURACIÓN RÁPIDA */}
-            <div className="rounded-2xl overflow-hidden" style={{background:'linear-gradient(135deg,#0f2027,#1a3a4a,#0f2027)',border:'1px solid rgba(59,130,246,0.2)'}}>
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl" style={{background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)'}}><CreditCard size={18} className="text-blue-400"/></div>
-                    <div>
-                      <p className="font-display font-bold text-white text-sm">Facturación ARCA</p>
-                      <p className="text-xs text-slate-400">Acceso rápido al portal de AFIP</p>
-                    </div>
-                  </div>
-                  <button onClick={()=>window.open('https://arca.afip.gob.ar','_blank')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105 active:scale-95" style={{background:'linear-gradient(135deg,#2563eb,#1d4ed8)',boxShadow:'0 4px 16px rgba(37,99,235,0.4)'}}>
-                    🧾 Ir a ARCA
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                  {(tallerConfig.empresas||[]).map(emp=>(
-                    <div key={emp.id} className="rounded-xl p-3 flex items-center justify-between gap-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
-                      <div className="min-w-0">
-                        <p className="font-bold text-white text-sm truncate">{emp.nombre}</p>
-                        <p className="text-xs text-slate-400 font-mono">{emp.cuit||'Sin CUIT cargado'}</p>
-                      </div>
-                      {emp.cuit&&<button onClick={()=>{navigator.clipboard.writeText(emp.cuit);showNotif('✓ CUIT copiado');}} className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-400 transition-colors hover:bg-blue-500/10" style={{border:'1px solid rgba(59,130,246,0.3)'}}>Copiar CUIT</button>}
-                    </div>
-                  ))}
-                  {(!tallerConfig.empresas||tallerConfig.empresas.length===0)&&(
-                    <p className="text-xs text-slate-500 text-center py-2">Cargá tus empresas en Configuración para ver los datos aquí</p>
-                  )}
-                </div>
+            {/* ARCA */}
+            <div style={{background:'rgba(37,99,235,0.08)',border:'1px solid rgba(37,99,235,0.2)',borderRadius:'16px',padding:'14px 18px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <p style={{fontSize:'13px',fontWeight:700,color:'white'}}>Facturación AFIP</p>
+                <p style={{fontSize:'11px',color:'#6b7280',marginTop:'2px'}}>{(tallerConfig.empresas||[])[0]?.cuit||'Configurá tu CUIT'}</p>
               </div>
+              <button onClick={()=>window.open('https://www.afip.gob.ar/landing/default.asp','_blank')} style={{background:'linear-gradient(135deg,#2563eb,#1d4ed8)',color:'white',border:'none',borderRadius:'12px',padding:'8px 16px',fontSize:'12px',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>
+                Ir a ARCA
+              </button>
             </div>
+
           </div>
         )}
 
@@ -1433,7 +1425,10 @@ export default function App() {
                 <div key={budget.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-bold">{budget.clientName}</h4>
+                      <div className="flex items-center gap-2">
+                    {budget.budgetNumber&&<span className="text-xs font-bold text-blue-400 font-mono">#{budget.budgetNumber}</span>}
+                    <h4 className="font-bold">{budget.clientName}</h4>
+                  </div>
                       <p className={`text-sm ${dm?'text-slate-400':'text-slate-500'}`}>{budget.vehicle}{budget.plate&&` · ${budget.plate}`}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-xs text-slate-400">📅 {budget.date?new Date(budget.date+'T12:00:00').toLocaleDateString('es-AR'):'—'}</p>
@@ -1992,7 +1987,7 @@ function RepForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,s
       <FInp label="Vehículo *" required placeholder="Toyota Corolla" value={data.vehicle||''} onChange={e=>setData(f=>({...f,vehicle:e.target.value}))} dm={dm}/>
       <FInp label="Patente" placeholder="ABC123" className={`inp uppercase font-mono ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} value={data.plate||''} onChange={e=>setData(f=>({...f,plate:e.target.value.toUpperCase()}))} dm={dm}/>
       <FInp label="Km" type="number" placeholder="75000" value={data.km||''} onChange={e=>setData(f=>({...f,km:e.target.value}))} dm={dm}/>
-      <FInp label="Mano de obra $" type="number" min="0" value={data.laborCost||0} onChange={e=>setData(f=>({...f,laborCost:e.target.value}))} dm={dm}/>
+      <FInp label="Mano de obra $" type="number" min="0" placeholder="0" value={data.laborCost||''} onChange={e=>setData(f=>({...f,laborCost:e.target.value}))} dm={dm}/>
     </div>
     <div><span className="lbl">Estado</span><div className="flex gap-2 flex-wrap">{Object.entries(STATUS_CONFIG).map(([key,cfg])=><button key={key} type="button" onClick={()=>setData(f=>({...f,status:key}))} className={`status-pill cursor-pointer border-2 transition-all ${data.status===key?'border-orange-500 ring-2 ring-orange-200':'border-transparent'} ${cfg.tw}`}>{cfg.icon} {cfg.label}</button>)}</div></div>
     <div><span className="lbl">Pago</span><div className="flex gap-2 flex-wrap">{Object.entries(PAYMENT_CONFIG).map(([key,cfg])=><button key={key} type="button" onClick={()=>setData(f=>({...f,paymentStatus:key}))} className="text-xs font-bold px-3 py-2 rounded-xl border-2 transition-all" style={{color:cfg.color,background:(data.paymentStatus||'debe')===key?cfg.bg:'transparent',borderColor:(data.paymentStatus||'debe')===key?cfg.color:'rgba(100,116,139,0.3)'}}>{cfg.icon} {cfg.label}</button>)}</div></div>
@@ -2009,7 +2004,10 @@ function BudForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,s
   if(!data) return null;
   return<FCard onSubmit={onSubmit} title={isEdit?'Editar Presupuesto':'Nuevo Presupuesto'} onCancel={onCancel} dm={dm}>
     {prefilled&&<span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-lg font-bold self-start">Datos precargados — revisá</span>}
-    <FInp label="Fecha" type="date" value={data.date||''} onChange={e=>setData(f=>({...f,date:e.target.value}))} dm={dm}/>
+    <div className="grid grid-cols-2 gap-3">
+      <FInp label="Fecha" type="date" value={data.date||''} onChange={e=>setData(f=>({...f,date:e.target.value}))} dm={dm}/>
+      <FInp label="N° Presupuesto" placeholder="Auto" value={data.budgetNumber||''} onChange={e=>setData(f=>({...f,budgetNumber:e.target.value}))} dm={dm}/>
+    </div>
     {/* Empresa selector */}
     {empresas.length>1&&<div><span className="lbl">Empresa de facturación</span>
       <div className="flex gap-2 flex-wrap">
@@ -2023,7 +2021,7 @@ function BudForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,s
       <FInp label="Vehículo *" required placeholder="Ford Ka" value={data.vehicle||''} onChange={e=>setData(f=>({...f,vehicle:e.target.value}))} dm={dm}/>
       <FInp label="Patente" placeholder="ABC123" value={data.plate||''} onChange={e=>setData(f=>({...f,plate:e.target.value.toUpperCase()}))} dm={dm}/>
       <FInp label="Km" type="number" placeholder="75000" value={data.km||''} onChange={e=>setData(f=>({...f,km:e.target.value}))} dm={dm}/>
-      <FInp label="Mano de obra $" type="number" min="0" value={data.laborCost||0} onChange={e=>setData(f=>({...f,laborCost:e.target.value}))} dm={dm}/>
+      <FInp label="Mano de obra $" type="number" min="0" placeholder="0" value={data.laborCost||''} onChange={e=>setData(f=>({...f,laborCost:e.target.value}))} dm={dm}/>
     </div>
     <FTA label="Descripción" placeholder="Trabajo a realizar..." value={data.description||''} onChange={e=>setData(f=>({...f,description:e.target.value}))} dm={dm}/>
     <PSel inventory={inventory} parts={data.partsUsed||[]} onChange={p=>setData(f=>({...f,partsUsed:p}))} dm={dm}/>
@@ -2053,10 +2051,10 @@ function ProdForm({isEdit,data,setData,onSubmit,onCancel,dm,sc,cats=[]}){
       {data.imageUrl&&<img src={data.imageUrl} alt="" className="w-24 h-24 object-cover rounded-2xl mt-2"/>}
     </div>
     <div className="grid grid-cols-2 gap-3">
-      <FInp label="Precio costo $" type="number" min="0" value={data.cost||0} onChange={e=>setData(f=>({...f,cost:e.target.value}))} dm={dm}/>
-      <FInp label="Precio venta $" type="number" min="0" value={data.salePrice||0} onChange={e=>setData(f=>({...f,salePrice:e.target.value}))} dm={dm}/>
+      <FInp label="Precio costo $" type="number" min="0" placeholder="0" value={data.cost||""} onChange={e=>setData(f=>({...f,cost:e.target.value}))} dm={dm}/>
+      <FInp label="Precio venta $" type="number" min="0" placeholder="0" value={data.salePrice||""} onChange={e=>setData(f=>({...f,salePrice:e.target.value}))} dm={dm}/>
       <FInp label="Stock" type="number" min="0" value={data.quantity||0} onChange={e=>setData(f=>({...f,quantity:e.target.value}))} dm={dm}/>
-      <FInp label="Mínimo" type="number" min="0" value={data.minStock||1} onChange={e=>setData(f=>({...f,minStock:e.target.value}))} dm={dm}/>
+      <FInp label="Mínimo" type="number" min="0" placeholder="1" value={data.minStock||""} onChange={e=>setData(f=>({...f,minStock:e.target.value}))} dm={dm}/>
     </div>
     <FBtn>{isEdit?'Guardar cambios':'Guardar Repuesto'}</FBtn>
   </FCard>;

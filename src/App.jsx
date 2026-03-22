@@ -57,7 +57,7 @@ const EMPTY_REPAIR = { vehicle:'', plate:'', km:'', clientId:'', clientName:'', 
 const EMPTY_BUDGET = { clientId:'', clientName:'', clientPhone:'', vehicle:'', plate:'', km:'', description:'', partsUsed:[], laborCost:0, notes:'', date:new Date().toISOString().split('T')[0], empresaId:'1' };
 const EMPTY_CLIENT = { name:'', phone:'', email:'', vehicles:[] };
 const EMPTY_VEHICLE = { make:'', model:'', year:'', plate:'', km:'', clientId:'', clientName:'' };
-const EMPTY_PRODUCT = { name:'', sku:'', barcode:'', location:'', quantity:0, minStock:1, cost:0, imageUrl:'', description:'', supplier:'', supplierPhone:'', categoryId:'' };
+const EMPTY_PRODUCT = { name:'', sku:'', barcode:'', location:'', quantity:0, minStock:1, cost:0, salePrice:0, imageUrl:'', description:'', supplier:'', supplierPhone:'', categoryId:'' };
 
 
 function CatSelect({data, setData, categories, dm}) {
@@ -187,6 +187,23 @@ export default function App() {
 
   const showNotif = useCallback((msg, type='success') => { setNotification({msg,type}); setTimeout(()=>setNotification(null),3500); }, []);
 
+  const playBeep = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(1800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.15);
+    } catch {}
+  }, []);
+
   useEffect(() => { document.documentElement.classList.add('dark'); }, []);
   useEffect(() => { signInAnonymously(auth).catch(console.error); return onAuthStateChanged(auth, u=>{setUser(u);setLoading(false);}); }, []);
 
@@ -287,6 +304,7 @@ export default function App() {
           await qr.start({facingMode:"environment"},{fps:10,qrbox:{width:280,height:160},formatsToSupport:formats.length>0?formats:undefined},
             text=>{
               const found=inventory.find(p=>p.sku===text||p.id===text||p.barcode===text);
+              playBeep();
               if (found){
                 setScannedProduct(found);setQrQty(1);setSelectedRepairForQR('');setQrAction(null);setShowQRModal(true);
                 setView('dashboard'); qr.stop().catch(()=>{});
@@ -1289,9 +1307,10 @@ export default function App() {
               {selectedProduct.description&&<p className="text-slate-400 text-xs text-center mt-1">{selectedProduct.description}</p>}
             </div>
             <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className={`rounded-2xl p-4 text-center ${dm?'bg-[#0d1117]':'bg-slate-50'}`}><p className={`text-4xl font-black font-display ${selectedProduct.quantity<=selectedProduct.minStock?'text-red-500':''}`}>{selectedProduct.quantity}</p><p className="text-xs font-bold text-slate-400 uppercase mt-1">Stock</p></div>
-                <div className={`rounded-2xl p-4 text-center ${dm?'bg-[#0d1117]':'bg-slate-50'}`}><p className="text-2xl font-black font-display">${Number(selectedProduct.cost).toLocaleString()}</p><p className="text-xs font-bold text-slate-400 uppercase mt-1">Costo</p></div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className={`rounded-2xl p-3 text-center ${dm?'bg-[#0d1117]':'bg-slate-50'}`}><p className={`text-3xl font-black font-display ${selectedProduct.quantity<=selectedProduct.minStock?'text-red-500':''}`}>{selectedProduct.quantity}</p><p className="text-xs font-bold text-slate-400 uppercase mt-1">Stock</p></div>
+                <div className={`rounded-2xl p-3 text-center ${dm?'bg-[#0d1117]':'bg-slate-50'}`}><p className="text-xl font-black font-display text-emerald-400">${Number(selectedProduct.salePrice||selectedProduct.cost).toLocaleString()}</p><p className="text-xs font-bold text-slate-400 uppercase mt-1">Venta</p></div>
+                <div className={`rounded-2xl p-3 text-center ${dm?'bg-[#0d1117]':'bg-slate-50'}`}><p className="text-xl font-black font-display text-slate-400">${Number(selectedProduct.cost).toLocaleString()}</p><p className="text-xs font-bold text-slate-400 uppercase mt-1">Costo</p></div>
               </div>
               {selectedProduct.supplier&&<div className={`rounded-2xl p-3 text-sm ${dm?'bg-[#0d1117]':'bg-slate-50'}`}><p className="font-bold">🏪 {selectedProduct.supplier}</p>{selectedProduct.supplierPhone&&<p className={`text-xs mt-0.5 ${dm?'text-slate-400':'text-slate-500'}`}>📞 {selectedProduct.supplierPhone}</p>}</div>}
               <div className={`flex items-center justify-between gap-3 rounded-2xl p-3 ${dm?'bg-[#0d1117]':'bg-slate-50'}`}>
@@ -1359,6 +1378,7 @@ export default function App() {
                     <p className="font-black text-emerald-500 text-xl font-display">${rep.totalCost?.toLocaleString()}</p>
                     {(rep.payments||[]).length>0&&(()=>{const paid=(rep.payments||[]).reduce((s,p)=>s+p.amount,0);return<p className="text-xs font-bold text-orange-400">Pagó ${paid.toLocaleString()}</p>;})()}
                     {rep.laborCost>0&&<p className="text-xs text-slate-400">MO: ${Number(rep.laborCost).toLocaleString()}</p>}
+                    {(()=>{const ganancia=(rep.totalCost||0)-(rep.partsUsed||[]).reduce((s,p)=>s+(p.costOriginal||p.cost)*p.qty,0);return ganancia>0?<p className="text-xs font-bold text-blue-400">Gan: ${ganancia.toLocaleString()}</p>:null;})()}
                   </div>
                 </div>
                 {rep.description&&<p className={`text-sm italic mb-2 ${dm?'text-slate-400':'text-slate-500'}`}>{rep.description}</p>}
@@ -1942,7 +1962,7 @@ function PSel({inventory,parts,onChange,dm}){
     <span className="lbl">Repuestos</span>
     <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13}/><input className={`inp pl-9 text-sm ${dm?'bg-[#0d1117] border-[#30363d] text-white placeholder-slate-600':'bg-slate-50 border-slate-200'}`} placeholder="Buscar repuesto..." value={search} onChange={e=>setSearch(e.target.value)}/></div>
     {search&&<div className={`rounded-2xl overflow-hidden shadow-2xl max-h-36 overflow-y-auto border ${dm?'bg-[#161b22] border-[#30363d]':'bg-white border-slate-200'}`}>
-      {inventory.filter(i=>i.name.toLowerCase().includes(search.toLowerCase())&&i.quantity>0&&!parts.find(p=>p.id===i.id)).map(i=><div key={i.id} onClick={()=>{onChange([...parts,{id:i.id,name:i.name,qty:1,cost:i.cost}]);setSearch('');}} className={`p-3 cursor-pointer text-sm flex justify-between border-b last:border-0 ${dm?'hover:bg-[#0d1117] border-[#30363d]':'hover:bg-orange-50 border-slate-50'}`}><span className="font-bold">{i.name}</span><span className="text-slate-400 text-xs">Stock: {i.quantity}</span></div>)}
+      {inventory.filter(i=>i.name.toLowerCase().includes(search.toLowerCase())&&i.quantity>0&&!parts.find(p=>p.id===i.id)).map(i=><div key={i.id} onClick={()=>{const precio=i.salePrice>0?i.salePrice:i.cost;onChange([...parts,{id:i.id,name:i.name,qty:1,cost:precio,costOriginal:i.cost}]);setSearch('');}} className={`p-3 cursor-pointer text-sm flex justify-between border-b last:border-0 ${dm?'hover:bg-[#0d1117] border-[#30363d]':'hover:bg-orange-50 border-slate-50'}`}><span className="font-bold">{i.name}</span><div className="text-right"><p className="text-emerald-400 text-xs font-bold">${Number(i.salePrice>0?i.salePrice:i.cost).toLocaleString()}</p><p className="text-slate-400 text-[10px]">stock: {i.quantity}</p></div></div>)}
       {inventory.filter(i=>i.name.toLowerCase().includes(search.toLowerCase())).length===0&&<p className="p-3 text-slate-400 text-sm text-center">No encontrado</p>}
     </div>}
     {parts.length>0&&<div className="space-y-1.5">
@@ -2032,8 +2052,9 @@ function ProdForm({isEdit,data,setData,onSubmit,onCancel,dm,sc,cats=[]}){
       </div>
       {data.imageUrl&&<img src={data.imageUrl} alt="" className="w-24 h-24 object-cover rounded-2xl mt-2"/>}
     </div>
-    <div className="grid grid-cols-3 gap-3">
-      <FInp label="Costo $" type="number" min="0" value={data.cost||0} onChange={e=>setData(f=>({...f,cost:e.target.value}))} dm={dm}/>
+    <div className="grid grid-cols-2 gap-3">
+      <FInp label="Precio costo $" type="number" min="0" value={data.cost||0} onChange={e=>setData(f=>({...f,cost:e.target.value}))} dm={dm}/>
+      <FInp label="Precio venta $" type="number" min="0" value={data.salePrice||0} onChange={e=>setData(f=>({...f,salePrice:e.target.value}))} dm={dm}/>
       <FInp label="Stock" type="number" min="0" value={data.quantity||0} onChange={e=>setData(f=>({...f,quantity:e.target.value}))} dm={dm}/>
       <FInp label="Mínimo" type="number" min="0" value={data.minStock||1} onChange={e=>setData(f=>({...f,minStock:e.target.value}))} dm={dm}/>
     </div>

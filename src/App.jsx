@@ -382,7 +382,13 @@ export default function App() {
     if (target.includes('epair')){setClientSearch(client.name);setShowClientDD(false);}
     else {setClientSearchB(client.name);setShowClientDDB(false);}
   };
-  const selectVehicle = (v,setter) => { const vStr=`${v.make||''} ${v.model||''} ${v.year||''}`.trim(); setter(f=>({...f,vehicle:vStr,plate:v.plate||'',km:v.km||''})); };
+  const selectVehicle = (v,setter) => {
+    const vStr=`${v.make||''} ${v.model||''} ${v.year||''}`.trim();
+    // Get last km from repair history for this vehicle
+    const lastRepairWithKm = [...repairs].filter(r=>r.plate===v.plate&&r.km).sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0));
+    const lastKm = lastRepairWithKm.length>0 ? lastRepairWithKm[0].km : (v.km||'');
+    setter(f=>({...f,vehicle:vStr,plate:v.plate||'',km:lastKm}));
+  };
 
   // AI
   const askAI = async prompt => {
@@ -1092,7 +1098,7 @@ export default function App() {
         </div>
       )}
 
-      <main className={`p-4 md:p-8 max-w-4xl mx-auto ${view==='dashboard'?'pb-32':'pt-16 pb-36'}`}>
+      <main className={`p-4 md:p-8 max-w-4xl mx-auto ${view==='dashboard'?'pb-40':'pt-16 pb-40'}`}>
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(
@@ -1840,7 +1846,7 @@ export default function App() {
 
         {/* QR SCAN */}
         {view==='scan'&&(
-          <div className="fixed inset-0 z-[100] flex flex-col" style={{background:'#000'}}>
+          <div className="fixed inset-0 z-[100] flex flex-col" style={{background:'#000',position:'fixed'}}>
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-12 pb-4">
               <button onClick={()=>{setView('dashboard');setFlashOn(false);setZoomLevel(1);}} className="p-3 rounded-full" style={{background:'rgba(255,255,255,0.1)'}}><X size={22} className="text-white"/></button>
@@ -1856,7 +1862,7 @@ export default function App() {
               </button>
             </div>
             {/* Viewfinder */}
-            <div className="flex-1 relative flex items-center justify-center">
+            <div className="flex-1 relative flex items-center justify-center" style={{position:'relative'}}>
               <div id="qr-reader" className="w-full max-w-sm"/>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="relative" style={{width:'260px',height:'160px'}}>
@@ -1870,17 +1876,16 @@ export default function App() {
               </div>
             </div>
             {/* Controls */}
-            <div style={{paddingBottom:'110px',paddingLeft:'32px',paddingRight:'32px',paddingTop:'8px',display:'flex',flexDirection:'column',gap:'12px'}}>
-              <p style={{color:'#6b7280',textAlign:'center',fontSize:'12px'}}>Apuntá al código QR o código de barras</p>
-              {/* Zoom slider */}
-              <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
-                <span style={{color:'white',fontSize:'11px',fontWeight:700,width:'24px',textAlign:'center'}}>1x</span>
+            <div style={{position:'absolute',bottom:'110px',left:0,right:0,paddingLeft:'32px',paddingRight:'32px',display:'flex',flexDirection:'column',gap:'10px'}}>
+              <p style={{color:'rgba(255,255,255,0.4)',textAlign:'center',fontSize:'11px'}}>Apuntá al código QR o código de barras</p>
+              <div style={{display:'flex',alignItems:'center',gap:'12px',background:'rgba(0,0,0,0.5)',borderRadius:'16px',padding:'10px 16px',backdropFilter:'blur(10px)'}}>
+                <span style={{color:'white',fontSize:'11px',fontWeight:700,width:'28px',textAlign:'center'}}>1x</span>
                 <input type="range" min="1" max="4" step="0.5" value={zoomLevel} onChange={e=>{
                   const z=Number(e.target.value);
                   setZoomLevel(z);
                   try{ qrInstanceRef.current?.applyVideoConstraints({zoom:z}); }catch{}
-                }} style={{flex:1,accentColor:'#f97316'}}/>
-                <span style={{color:'white',fontSize:'11px',fontWeight:700,width:'24px',textAlign:'center'}}>{zoomLevel}x</span>
+                }} style={{flex:1,accentColor:'#f97316',height:'4px'}}/>
+                <span style={{color:'#f97316',fontSize:'11px',fontWeight:700,width:'28px',textAlign:'center'}}>{zoomLevel}x</span>
               </div>
             </div>
           </div>
@@ -1888,7 +1893,7 @@ export default function App() {
 
         {/* CAMERA */}
         {view==='camera'&&(
-          <div className="fixed inset-0 z-[100] flex flex-col" style={{background:'#000'}}>
+          <div className="fixed inset-0 z-[100] flex flex-col" style={{background:'#000',position:'fixed'}}>
             <div className="flex items-center justify-between p-5 absolute top-0 left-0 right-0 z-10">
               <button onClick={()=>{setView(({product:'add',editProduct:'edit_product',repair:'add_repair',editRepair:'edit_repair'})[cameraTarget]||'dashboard');setCapturedPhoto(null);}} className="p-3 rounded-full" style={{background:'rgba(0,0,0,0.5)'}}><X size={22} className="text-white"/></button>
               <p className="text-white font-bold text-sm">{capturedPhoto?'Revisar':'Tomar foto'}</p>

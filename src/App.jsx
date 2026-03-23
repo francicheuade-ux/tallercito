@@ -827,7 +827,7 @@ export default function App() {
           <button onClick={handleLogin} className="login-btn" disabled={!configLoaded} style={{opacity:configLoaded?1:0.6,cursor:configLoaded?'pointer':'not-allowed'}}>
             {configLoaded?'Ingresar':'Cargando...'}
           </button>
-          <p style={{color:'#4b5563',fontSize:'12px',textAlign:'center'}}>Usuario demo: <span style={{color:'#94a3b8',fontWeight:700}}>francisco</span> / <span style={{color:'#94a3b8',fontWeight:700}}>taller123</span></p>
+
         </div>
       </div>
     </div>
@@ -841,7 +841,7 @@ export default function App() {
 
   // ── MAIN APP ──────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen font-sans pb-28 ${view==='dashboard'?'md:pl-64':''} transition-colors duration-300 ${dm?'bg-[#090b0f] text-white':'bg-[#f4f5f9] text-slate-900'}`}>
+    <div className={`min-h-screen font-sans ${view==='dashboard'?'md:pl-64':''}`} style={{background:'#090b0f',color:'white'}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
         *{font-family:'Space Grotesk',sans-serif;box-sizing:border-box}
@@ -1056,20 +1056,14 @@ export default function App() {
         ))}
       </div>
 
-      {/* SLIM TOP BAR — shows on all non-dashboard views */}
-      {view!=='dashboard'&&(
-        <div className="fixed top-0 left-0 right-0 z-40 flex items-center gap-3 px-4 py-3" style={{background:dm?'rgba(7,9,13,0.95)':'rgba(12,16,24,0.97)',borderBottom:'1px solid rgba(255,255,255,0.07)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
-          <button onClick={()=>setView('dashboard')} className="p-2 rounded-xl flex-shrink-0 transition-colors hover:bg-white/10 text-white"><ChevronLeft size={20}/></button>
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="p-1.5 rounded-lg flex-shrink-0" style={{background:'linear-gradient(135deg,#ff6b1a,#e85510)'}}><Wrench size={13} className="text-white"/></div>
-            <span className={`font-display font-bold text-sm truncate text-white`}>{
-              {list:'Inventario',repairs:'Servicios',budgets:'Presupuestos',clients:'Clientes',vehicles_list:'Vehículos',history:'Historial',stock_history:'Mov. Stock',stats:'Estadísticas',ai_assistant:'Asistente IA',config:'Configuración',details:'Detalle',add:'Nuevo Repuesto',add_repair:'Nuevo Servicio',edit_repair:'Editar Servicio',add_budget:'Nuevo Presupuesto',edit_budget:'Editar Presupuesto',add_client:'Nuevo Cliente',edit_client:'Editar Cliente',add_vehicle:'Nuevo Vehículo',edit_vehicle:'Editar Vehículo',edit_product:'Editar Repuesto',search:'Búsqueda',camera:'Cámara',scan:'Escáner QR'}[view]||view
-            }</span>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={startQRScan} className="p-2 rounded-xl transition-colors hover:bg-white/10 text-orange-400"><QrCode size={18}/></button>
-            <button onClick={()=>setDarkMode(!dm)} className="p-2 rounded-xl transition-colors hover:bg-white/10 text-slate-400">{dm?<Sun size={18}/>:<Moon size={18}/>}</button>
-          </div>
+      {/* SLIM TOP BAR */}
+      {view!=='dashboard'&&view!=='scan'&&view!=='camera'&&(
+        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:40,display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',background:'rgba(9,11,15,0.95)',borderBottom:'1px solid rgba(255,255,255,0.06)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)'}}>
+          <button onClick={()=>setView('dashboard')} style={{padding:'8px',borderRadius:'12px',background:'rgba(255,255,255,0.06)',border:'none',cursor:'pointer',color:'white',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><ChevronLeft size={20}/></button>
+          <span style={{fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:'16px',color:'white',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{
+            {list:'Inventario',repairs:'Servicios',budgets:'Presupuestos',clients:'Clientes',vehicles_list:'Vehículos',history:'Historial',stock_history:'Mov. Stock',stats:'Estadísticas',ai_assistant:'Asistente IA',config:'Configuración',details:'Detalle',add:'Nuevo Repuesto',add_repair:'Nuevo Servicio',edit_repair:'Editar Servicio',add_budget:'Nuevo Presupuesto',edit_budget:'Editar Presupuesto',add_client:'Nuevo Cliente',edit_client:'Editar Cliente',add_vehicle:'Nuevo Vehículo',edit_vehicle:'Editar Vehículo',edit_product:'Editar Repuesto',search:'Búsqueda',camera:'Cámara',scan:'Escáner QR'}[view]||view
+          }</span>
+          <button onClick={startQRScan} style={{padding:'8px',borderRadius:'12px',background:'rgba(249,115,22,0.1)',border:'none',cursor:'pointer',color:'#f97316',display:'flex',flexShrink:0}}><QrCode size={18}/></button>
         </div>
       )}
 
@@ -1098,7 +1092,7 @@ export default function App() {
         </div>
       )}
 
-      <main className={`p-4 md:p-8 max-w-4xl mx-auto ${view==='dashboard'?'pb-40':'pt-16 pb-40'}`}>
+      <main style={{padding:'16px',maxWidth:'640px',margin:'0 auto',paddingTop: view==='dashboard'?'16px':'72px',paddingBottom:'160px'}}>
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(
@@ -1189,7 +1183,7 @@ export default function App() {
         {/* BÚSQUEDA */}
         {view==='search'&&globalSearch.length>1&&(
           <div className="space-y-4 anim">
-            <h2 className="page-title font-display">"{globalSearch}"</h2>
+            <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>"{globalSearch}"</h2>
             {globalResults?.clients.length>0&&<SSection title="Clientes" dm={dm}>{globalResults.clients.map(c=><div key={c.id} className={`py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}><p className="font-bold text-sm">{c.name}</p><p className="text-xs text-slate-400">{c.phone}</p></div>)}</SSection>}
             {globalResults?.repairs.length>0&&<SSection title="Servicios" dm={dm}>{globalResults.repairs.map(r=><div key={r.id} className={`py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'} flex justify-between items-center`}><div><p className="font-bold text-sm">{r.vehicle} {r.plate}</p><p className="text-xs text-slate-400">{r.clientName}</p></div><SPill status={r.status||'pendiente'}/></div>)}</SSection>}
             {globalResults?.vehicles.length>0&&<SSection title="Vehículos" dm={dm}>{globalResults.vehicles.map(v=><div key={v.id} className={`py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}><p className="font-bold text-sm">🚗 {v.make} {v.model} · <span className="font-mono">{v.plate}</span></p><p className="text-xs text-slate-400">{v.clientName}</p></div>)}</SSection>}
@@ -1202,7 +1196,7 @@ export default function App() {
         {view==='list'&&(
           <div className="space-y-4 anim">
             <div className="flex gap-3 justify-between items-center">
-              <h2 className="page-title font-display">Inventario</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Inventario</h2>
               <div className="flex gap-2 items-center">
                 <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
               </div>
@@ -1328,26 +1322,28 @@ export default function App() {
         {view==='repairs'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Servicios</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Servicios</h2>
               <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
               {Object.entries(STATUS_CONFIG).map(([key,cfg])=>(
-                <span key={key} className={`status-pill ${cfg.tw}`}><span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}/>{cfg.icon} {cfg.label} ({repairs.filter(r=>(r.status||'pendiente')===key).length})</span>
+                <span key={key} style={{padding:'4px 12px',borderRadius:'20px',fontSize:'11px',fontWeight:700,display:'inline-flex',alignItems:'center',gap:'5px',background:'rgba(255,255,255,0.05)',color:'#9ca3af',border:'1px solid rgba(255,255,255,0.08)'}}>
+                  {cfg.icon} {cfg.label} <span style={{color:'#f97316'}}>({repairs.filter(r=>(r.status||'pendiente')===key).length})</span>
+                </span>
               ))}
             </div>
             {listMode==='grid'&&(
               <div className="grid grid-cols-2 gap-3">
                 {[...repairs].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
-                  <div key={rep.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
+                  <div key={rep.id} style={{background:'#111318',borderRadius:'18px',padding:'16px',border:'1px solid rgba(255,255,255,0.06)',borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       {rep.orderNumber&&<span className="text-[10px] font-bold text-orange-500 font-mono">{rep.orderNumber}</span>}
                       <SPill status={rep.status||'pendiente'}/>
                     </div>
-                    <h4 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle}</h4>
-                    {rep.plate&&<span className={`font-mono text-xs ${dm?'text-slate-400':'text-slate-500'}`}>{rep.plate}</span>}
-                    {rep.clientName&&<p className="text-xs text-slate-400 mt-0.5">{rep.clientName}</p>}
-                    <p className="font-black text-emerald-500 font-display mt-1">${rep.totalCost?.toLocaleString()}</p>
+                    <p style={{fontWeight:800,fontSize:'14px',color:'white',marginBottom:'2px'}}>{rep.vehicle}</p>
+                    {rep.plate&&<span style={{fontFamily:'monospace',fontSize:'11px',color:'#6b7280'}}>{rep.plate}</span>}
+                    {rep.clientName&&<p style={{fontSize:'11px',color:'#6b7280',marginTop:'2px'}}>{rep.clientName}</p>}
+                    <p style={{fontWeight:900,color:'#10b981',fontSize:'16px',marginTop:'4px'}}>${(rep.totalCost||0).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -1355,44 +1351,49 @@ export default function App() {
             {listMode==='list'&&(
             <div className="space-y-4">
             {[...repairs].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
-              <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
-                {rep.imageUrl&&<img src={rep.imageUrl} alt="" className="w-full h-36 object-cover rounded-2xl mb-4"/>}
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      {rep.orderNumber&&<span className="text-xs font-bold text-orange-500 font-mono">{rep.orderNumber}</span>}
-                      <h4 className={`font-bold text-sm ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle}</h4>
-                      {rep.plate&&<span className={`font-mono text-xs px-2 py-0.5 rounded-lg ${dm?'bg-[#0d1117] text-slate-400':'bg-slate-100 text-slate-500'}`}>{rep.plate}</span>}
-                      <SPill status={rep.status||'pendiente'}/>
+              <div key={rep.id} style={{background:'#111318',borderRadius:'20px',overflow:'hidden',border:'1px solid rgba(255,255,255,0.06)'}}>
+                <div style={{height:'3px',background:rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}}/>
+                {rep.imageUrl&&<img src={rep.imageUrl} alt="" style={{width:'100%',height:'160px',objectFit:'cover'}}/>}
+                <div style={{padding:'16px'}}>
+                  {/* Header */}
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'10px'}}>
+                    <div style={{flex:1,minWidth:0,marginRight:'12px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'5px',flexWrap:'wrap'}}>
+                        {rep.orderNumber&&<span style={{fontSize:'10px',fontWeight:700,color:'#f97316',fontFamily:'monospace',background:'rgba(249,115,22,0.1)',padding:'2px 7px',borderRadius:'7px'}}>{rep.orderNumber}</span>}
+                        <SPill status={rep.status||'pendiente'}/>
+                        <PayBadge status={rep.paymentStatus||'debe'}/>
+                      </div>
+                      <p style={{fontWeight:800,fontSize:'16px',color:'white',marginBottom:'3px'}}>{rep.vehicle}</p>
+                      <div style={{display:'flex',gap:'10px',flexWrap:'wrap'}}>
+                        {rep.plate&&<span style={{fontSize:'11px',color:'#6b7280',fontFamily:'monospace'}}>{rep.plate}</span>}
+                        {rep.km&&<span style={{fontSize:'11px',color:'#6b7280'}}>🔢 {Number(rep.km).toLocaleString()} km</span>}
+                        {rep.clientName&&<span style={{fontSize:'11px',color:'#6b7280'}}>👤 {rep.clientName}</span>}
+                        {rep.date?.seconds&&<span style={{fontSize:'11px',color:'#6b7280'}}>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}
+                      </div>
                     </div>
-                    <div className={`flex gap-3 text-xs flex-wrap ${dm?'text-slate-400':'text-slate-400'}`}>
-                      {rep.clientName&&<span className="flex items-center gap-1"><Users size={10}/>{rep.clientName}</span>}
-                      {rep.km&&<span>🔢 {Number(rep.km).toLocaleString()} km</span>}
-                      {rep.date?.seconds&&<span>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}
-                      {rep.createdBy&&<span className="flex items-center gap-1"><User size={10}/>{rep.createdBy}</span>}
+                    <div style={{textAlign:'right',flexShrink:0}}>
+                      <p style={{fontWeight:900,fontSize:'22px',color:'#10b981',fontFamily:"'Outfit',sans-serif",lineHeight:1}}>${(rep.totalCost||0).toLocaleString()}</p>
+                      {(()=>{const paid=(rep.payments||[]).reduce((s,p)=>s+p.amount,0);return paid>0?<p style={{fontSize:'11px',color:'#f97316',fontWeight:700,marginTop:'2px'}}>Pagó ${paid.toLocaleString()}</p>:null;})()}
+                      {(()=>{const g=(rep.totalCost||0)-(rep.partsUsed||[]).reduce((s,p)=>s+(p.costOriginal||p.cost)*p.qty,0);return g>0?<p style={{fontSize:'11px',color:'#3b82f6',fontWeight:700}}>Gan ${g.toLocaleString()}</p>:null;})()}
                     </div>
                   </div>
-                  <div className="text-right ml-3">
-                    <p className="font-black text-emerald-500 text-xl font-display">${rep.totalCost?.toLocaleString()}</p>
-                    {(rep.payments||[]).length>0&&(()=>{const paid=(rep.payments||[]).reduce((s,p)=>s+p.amount,0);return<p className="text-xs font-bold text-orange-400">Pagó ${paid.toLocaleString()}</p>;})()}
-                    {rep.laborCost>0&&<p className="text-xs text-slate-400">MO: ${Number(rep.laborCost).toLocaleString()}</p>}
-                    {(()=>{const ganancia=(rep.totalCost||0)-(rep.partsUsed||[]).reduce((s,p)=>s+(p.costOriginal||p.cost)*p.qty,0);return ganancia>0?<p className="text-xs font-bold text-blue-400">Gan: ${ganancia.toLocaleString()}</p>:null;})()}
+                  {/* Description */}
+                  {rep.description&&<p style={{fontSize:'13px',color:'#9ca3af',marginBottom:'10px',fontStyle:'italic',lineHeight:1.5}}>{rep.description}</p>}
+                  {rep.notes&&<div style={{fontSize:'12px',background:'rgba(245,158,11,0.08)',color:'#fbbf24',padding:'8px 12px',borderRadius:'10px',marginBottom:'10px'}}>📝 {rep.notes}</div>}
+                  {/* Parts */}
+                  {rep.partsUsed?.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:'4px',marginBottom:'12px'}}>{rep.partsUsed.map((p,i)=><span key={i} style={{fontSize:'10px',fontWeight:700,color:'#9ca3af',background:'rgba(255,255,255,0.05)',padding:'3px 8px',borderRadius:'8px'}}>{p.qty}× {p.name}</span>)}</div>}
+                  {/* Status */}
+                  <div style={{display:'flex',gap:'4px',flexWrap:'wrap',marginBottom:'10px'}}>
+                    {Object.keys(STATUS_CONFIG).map(s=><button key={s} onClick={()=>updateRepairField(rep.id,'status',s)} style={{fontSize:'10px',fontWeight:700,padding:'5px 10px',borderRadius:'10px',border:'none',cursor:'pointer',background:(rep.status||'pendiente')===s?'#f97316':'rgba(255,255,255,0.05)',color:(rep.status||'pendiente')===s?'white':'#6b7280',transition:'all 0.15s'}}>{STATUS_CONFIG[s].icon} {STATUS_CONFIG[s].label}</button>)}
+                    {Object.entries(PAYMENT_CONFIG).map(([key,cfg])=><button key={key} onClick={()=>updateRepairField(rep.id,'paymentStatus',key)} style={{fontSize:'10px',fontWeight:700,padding:'5px 10px',borderRadius:'10px',cursor:'pointer',background:(rep.paymentStatus||'debe')===key?cfg.bg:'rgba(255,255,255,0.05)',color:(rep.paymentStatus||'debe')===key?cfg.color:'#6b7280',border:`1px solid ${(rep.paymentStatus||'debe')===key?cfg.color:'transparent'}`,transition:'all 0.15s'}}>{cfg.icon} {cfg.label}</button>)}
                   </div>
-                </div>
-                {rep.description&&<p className={`text-sm italic mb-2 ${dm?'text-slate-400':'text-slate-500'}`}>{rep.description}</p>}
-                {rep.notes&&<div className={`text-xs rounded-xl p-2.5 mb-3 ${dm?'bg-amber-900/20 text-amber-400':'bg-amber-50 text-slate-600'}`}>📝 {rep.notes}</div>}
-                {rep.partsUsed?.length>0&&<div className="flex flex-wrap gap-1 mb-3">{rep.partsUsed.map((p,i)=><span key={i} className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${dm?'bg-[#0d1117] text-slate-400':'bg-slate-100 text-slate-600'}`}>{p.qty}x {p.name}</span>)}</div>}
-                <div className={`flex items-center justify-between pt-3 border-t flex-wrap gap-2 ${dm?'border-[#30363d]':'border-slate-50'}`}>
-                  <div className="flex gap-1 flex-wrap">
-                    {Object.keys(STATUS_CONFIG).map(s=><button key={s} onClick={()=>updateRepairField(rep.id,'status',s)} className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all ${(rep.status||'pendiente')===s?'bg-orange-500 text-white':dm?'bg-[#21262d] text-slate-400 hover:text-slate-200':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{STATUS_CONFIG[s].icon} {STATUS_CONFIG[s].label}</button>)}
-                    {Object.entries(PAYMENT_CONFIG).map(([key,cfg])=><button key={key} onClick={()=>updateRepairField(rep.id,'paymentStatus',key)} className="text-[10px] font-bold px-2 py-1.5 rounded-lg transition-all" style={{background:(rep.paymentStatus||'debe')===key?cfg.bg:'transparent',color:cfg.color,border:`1px solid ${(rep.paymentStatus||'debe')===key?cfg.color:'rgba(100,116,139,0.25)'}`}}>{cfg.icon}</button>)}
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap">
-                    <button onClick={()=>{setEditingRepair({...rep});setClientSearch(rep.clientName||'');setView('edit_repair');}} className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl ${dm?'bg-[#21262d] text-slate-300 hover:text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}><Edit3 size={11}/>Editar</button>
-                    <button onClick={()=>{setShowPaymentModal(rep.id);setPaymentAmount('');}} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500"><DollarSign size={11}/>Pago</button>
-                    {(rep.status==='listo'||rep.status==='entregado')&&<button onClick={()=>openConvertToBudget(rep)} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-blue-500/10 text-blue-400"><FileText size={11}/>Pres.</button>}
-                    <button onClick={()=>printWorkOrder(rep)} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-slate-500/10 text-slate-400"><Printer size={11}/>OT</button>
-                    <button onClick={()=>deleteItem('repairs',rep.id,`${rep.vehicle}`)} className="p-1.5 text-red-400 rounded-xl"><Trash2 size={12}/></button>
+                  {/* Actions */}
+                  <div style={{display:'flex',gap:'6px',flexWrap:'wrap',borderTop:'1px solid rgba(255,255,255,0.05)',paddingTop:'10px'}}>
+                    <button onClick={()=>{setEditingRepair({...rep});setClientSearch(rep.clientName||'');setView('edit_repair');}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.06)',color:'#e2e8f0',border:'none',cursor:'pointer'}}><Edit3 size={12}/>Editar</button>
+                    <button onClick={()=>{setShowPaymentModal(rep.id);setPaymentAmount('');}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(16,185,129,0.1)',color:'#10b981',border:'none',cursor:'pointer'}}><DollarSign size={12}/>Pago</button>
+                    {(rep.status==='listo'||rep.status==='entregado')&&<button onClick={()=>openConvertToBudget(rep)} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(59,130,246,0.1)',color:'#3b82f6',border:'none',cursor:'pointer'}}><FileText size={12}/>Pres.</button>}
+                    <button onClick={()=>printWorkOrder(rep)} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.05)',color:'#9ca3af',border:'none',cursor:'pointer'}}><Printer size={12}/>OT</button>
+                    <button onClick={()=>deleteItem('repairs',rep.id,`${rep.vehicle}`)} style={{marginLeft:'auto',padding:'8px 10px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',color:'#ef4444',border:'none',cursor:'pointer'}}><Trash2 size={13}/></button>
                   </div>
                 </div>
               </div>
@@ -1407,7 +1408,7 @@ export default function App() {
         {view==='budgets'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Presupuestos</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Presupuestos</h2>
               <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
             {listMode==='grid'&&(
@@ -1415,7 +1416,7 @@ export default function App() {
                 {[...budgets].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
                   const emp2=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
                   return (
-                    <div key={budget.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
+                    <div key={budget.id} style={{background:'#111318',borderRadius:'18px',padding:'16px',border:'1px solid rgba(255,255,255,0.06)'}} style={{borderLeft:'3px solid #3b82f6'}}>
                       <h4 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{budget.clientName||'—'}</h4>
                       <p className={`text-xs truncate ${dm?'text-slate-400':'text-slate-500'}`}>{budget.vehicle}</p>
                       <p className="text-xs text-slate-400">📅 {budget.date?new Date(budget.date+'T12:00:00').toLocaleDateString('es-AR'):'—'}</p>
@@ -1428,7 +1429,7 @@ export default function App() {
             {listMode==='list'&&[...budgets].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
               const emp=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
               return (
-                <div key={budget.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
+                <div key={budget.id} style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}} style={{borderLeft:'3px solid #3b82f6'}}>
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="flex items-center gap-2">
@@ -1462,13 +1463,13 @@ export default function App() {
         {view==='clients'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Clientes</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Clientes</h2>
               <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
             {listMode==='grid'&&(
               <div className="grid grid-cols-2 gap-3">
                 {clients.map(c2=>(
-                  <div key={c2.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #8b5cf6'}}>
+                  <div key={c2.id} style={{background:'#111318',borderRadius:'18px',padding:'16px',border:'1px solid rgba(255,255,255,0.06)'}} style={{borderLeft:'3px solid #8b5cf6'}}>
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-black text-sm mb-2" style={{background:'linear-gradient(135deg,#8b5cf6,#7c3aed)'}}>{c2.name?.[0]}</div>
                     <h4 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{c2.name}</h4>
                     {c2.phone&&<p className="text-xs text-slate-400">{c2.phone}</p>}
@@ -1478,7 +1479,7 @@ export default function App() {
               </div>
             )}
             {listMode==='list'&&clients.map(client=>(
-              <div key={client.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #8b5cf6'}}>
+              <div key={client.id} style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}} style={{borderLeft:'3px solid #8b5cf6'}}>
                 <div className="flex justify-between items-start mb-2">
                   <div><h4 className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{client.name}</h4>{client.phone&&<p className={`text-sm mt-0.5 ${dm?'text-slate-400':'text-slate-500'}`}>📞 {client.phone}</p>}{client.email&&<p className={`text-xs ${dm?'text-slate-500':'text-slate-400'}`}>{client.email}</p>}</div>
                   <div className="flex gap-2">
@@ -1506,7 +1507,7 @@ export default function App() {
         {view==='vehicles_list'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Vehículos</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Vehículos</h2>
               <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
             {vehicles.map(v=>(
@@ -1534,7 +1535,7 @@ export default function App() {
             <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15}/><input className={`inp pl-9 ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="Patente o modelo..." value={vehicleFilter} onChange={e=>setVehicleFilter(e.target.value)}/></div>
             {vehicleFilter&&vehicleHistory.length===0&&<div className={`card card-s p-8 text-center text-sm ${dm?'bg-[#161b22] text-slate-500':'bg-white text-slate-400'}`}>Sin registros para "{vehicleFilter}"</div>}
             {[...vehicleHistory].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
-              <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
+              <div key={rep.id} style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                 <div className="flex justify-between items-start mb-1">
                   <div><h4 className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle} <span className="font-mono text-sm text-slate-400">{rep.plate}</span></h4>
                     <div className={`flex gap-3 text-xs mt-0.5 ${dm?'text-slate-500':'text-slate-400'}`}>{rep.km&&<span>🔢 {Number(rep.km).toLocaleString()} km</span>}{rep.date?.seconds&&<span>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}</div></div>
@@ -1551,7 +1552,7 @@ export default function App() {
         {view==='stock_history'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Movimientos</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Movimientos</h2>
               <DangerBtn onClick={()=>deleteAll('stock_history')}/>
             </div>
             <div className={`card card-s overflow-hidden ${dm?'bg-[#161b22]':'bg-white'}`}>
@@ -1592,7 +1593,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+            <div style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}}>
               <p className={`font-display font-bold mb-4 text-sm ${dm?'text-white':'text-slate-800'}`}>Ingresos últimos 6 meses</p>
               <div className="flex items-end gap-2 h-32">
                 {chartData.map((d,i)=>(
@@ -1605,7 +1606,7 @@ export default function App() {
               </div>
             </div>
             {topServices.length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+              <div style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}}>
                 <p className="font-display font-bold mb-3 text-sm flex items-center gap-2"><Award size={15} className="text-orange-500"/>Servicios más frecuentes</p>
                 {topServices.map(([name,count],i)=>(
                   <div key={i} className={`flex items-center gap-3 py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}>
@@ -1617,7 +1618,7 @@ export default function App() {
               </div>
             )}
             {topParts.length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+              <div style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}}>
                 <p className={`font-display font-bold mb-3 text-sm flex items-center gap-2 ${dm?'text-white':'text-slate-800'}`}><Package size={15} className="text-orange-500"/>Repuestos más usados</p>
                 {topParts.map(([name,qty],i)=>(
                   <div key={i} className={`flex items-center gap-3 py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}>
@@ -1863,7 +1864,7 @@ export default function App() {
             </div>
             {/* Viewfinder */}
             <div className="flex-1 relative flex items-center justify-center" style={{position:'relative'}}>
-              <div id="qr-reader" className="w-full max-w-sm"/>
+              <div id="qr-reader" style={{width:'100%',position:'absolute',inset:0,opacity:0,pointerEvents:'none'}}/>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="relative" style={{width:'260px',height:'160px'}}>
                   {[['top-0 left-0 border-t-4 border-l-4 rounded-tl-2xl'],['top-0 right-0 border-t-4 border-r-4 rounded-tr-2xl'],['bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl'],['bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl']].map(([cls],i)=>(
@@ -1925,7 +1926,7 @@ export default function App() {
 
 function SPill({status}){const c=STATUS_CONFIG[status]||STATUS_CONFIG.pendiente;return<span className={`status-pill ${c.tw}`}><span className={`w-1.5 h-1.5 rounded-full ${c.dot}`}/>{c.icon} {c.label}</span>;}
 function PayBadge({status}){const c=PAYMENT_CONFIG[status]||PAYMENT_CONFIG.debe;return<span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{background:c.bg,color:c.color}}>{c.icon} {c.label}</span>;}
-function SSection({title,children,dm}){return<div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}><p className="lbl mb-3">{title}</p>{children}</div>;}
+function SSection({title,children,dm}){return<div style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}}><p className="lbl mb-3">{title}</p>{children}</div>;}
 function EC({icon,text,dm,className=''}){return<div className={`card card-s p-12 text-center ${dm?'bg-[#161b22] card-dark text-slate-500':'bg-white text-slate-400'} ${className}`}><div className="mx-auto mb-3 opacity-20 flex justify-center">{icon}</div><p className="text-sm font-medium">{text}</p></div>;}
 function DangerBtn({onClick}){return<button onClick={onClick} className="p-2.5 rounded-xl text-red-400 border" style={{borderColor:'rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.08)'}}><Trash2 size={16}/></button>;}
 

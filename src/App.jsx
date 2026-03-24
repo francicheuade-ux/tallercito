@@ -91,9 +91,9 @@ function CatSelect({data, setData, categories, dm}) {
 
 function ViewToggle({mode, setMode, dm}) {
   return (
-    <div className={`flex rounded-xl overflow-hidden border ${dm?'border-[#30363d]':'border-slate-200'}`}>
-      <button onClick={()=>{setMode('list');localStorage.setItem('tm_listmode','list');}} className={`p-2 transition-colors ${mode==='list'?'bg-orange-500 text-white':(dm?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600')}`}><LayoutList size={16}/></button>
-      <button onClick={()=>{setMode('grid');localStorage.setItem('tm_listmode','grid');}} className={`p-2 transition-colors ${mode==='grid'?'bg-orange-500 text-white':(dm?'text-slate-500 hover:text-slate-300':'text-slate-400 hover:text-slate-600')}`}><LayoutGrid size={16}/></button>
+    <div style={{display:'flex',background:'rgba(255,255,255,0.05)',borderRadius:'12px',padding:'3px',gap:'2px'}}>
+      <button onClick={()=>{setMode('list');localStorage.setItem('tm_listmode','list');}} style={{padding:'6px 10px',borderRadius:'9px',border:'none',cursor:'pointer',background:mode==='list'?'#f97316':'transparent',color:mode==='list'?'white':'#6b7280',transition:'all 0.2s',display:'flex',alignItems:'center'}}><LayoutList size={15}/></button>
+      <button onClick={()=>{setMode('grid');localStorage.setItem('tm_listmode','grid');}} style={{padding:'6px 10px',borderRadius:'9px',border:'none',cursor:'pointer',background:mode==='grid'?'#f97316':'transparent',color:mode==='grid'?'white':'#6b7280',transition:'all 0.2s',display:'flex',alignItems:'center'}}><LayoutGrid size={15}/></button>
     </div>
   );
 }
@@ -827,7 +827,7 @@ export default function App() {
           <button onClick={handleLogin} className="login-btn" disabled={!configLoaded} style={{opacity:configLoaded?1:0.6,cursor:configLoaded?'pointer':'not-allowed'}}>
             {configLoaded?'Ingresar':'Cargando...'}
           </button>
-          <p style={{color:'#4b5563',fontSize:'12px',textAlign:'center'}}>Usuario demo: <span style={{color:'#94a3b8',fontWeight:700}}>francisco</span> / <span style={{color:'#94a3b8',fontWeight:700}}>taller123</span></p>
+
         </div>
       </div>
     </div>
@@ -841,7 +841,7 @@ export default function App() {
 
   // ── MAIN APP ──────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen font-sans pb-28 ${view==='dashboard'?'md:pl-64':''} transition-colors duration-300 ${dm?'bg-[#090b0f] text-white':'bg-[#f4f5f9] text-slate-900'}`}>
+    <div className={`min-h-screen font-sans ${view==='dashboard'?'md:pl-64':''}`} style={{background:'#090b0f',color:'white'}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
         *{font-family:'Space Grotesk',sans-serif;box-sizing:border-box}
@@ -1056,20 +1056,14 @@ export default function App() {
         ))}
       </div>
 
-      {/* SLIM TOP BAR — shows on all non-dashboard views */}
-      {view!=='dashboard'&&(
-        <div className="fixed top-0 left-0 right-0 z-40 flex items-center gap-3 px-4 py-3" style={{background:dm?'rgba(7,9,13,0.95)':'rgba(12,16,24,0.97)',borderBottom:'1px solid rgba(255,255,255,0.07)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
-          <button onClick={()=>setView('dashboard')} className="p-2 rounded-xl flex-shrink-0 transition-colors hover:bg-white/10 text-white"><ChevronLeft size={20}/></button>
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="p-1.5 rounded-lg flex-shrink-0" style={{background:'linear-gradient(135deg,#ff6b1a,#e85510)'}}><Wrench size={13} className="text-white"/></div>
-            <span className={`font-display font-bold text-sm truncate text-white`}>{
-              {list:'Inventario',repairs:'Servicios',budgets:'Presupuestos',clients:'Clientes',vehicles_list:'Vehículos',history:'Historial',stock_history:'Mov. Stock',stats:'Estadísticas',ai_assistant:'Asistente IA',config:'Configuración',details:'Detalle',add:'Nuevo Repuesto',add_repair:'Nuevo Servicio',edit_repair:'Editar Servicio',add_budget:'Nuevo Presupuesto',edit_budget:'Editar Presupuesto',add_client:'Nuevo Cliente',edit_client:'Editar Cliente',add_vehicle:'Nuevo Vehículo',edit_vehicle:'Editar Vehículo',edit_product:'Editar Repuesto',search:'Búsqueda',camera:'Cámara',scan:'Escáner QR'}[view]||view
-            }</span>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={startQRScan} className="p-2 rounded-xl transition-colors hover:bg-white/10 text-orange-400"><QrCode size={18}/></button>
-            <button onClick={()=>setDarkMode(!dm)} className="p-2 rounded-xl transition-colors hover:bg-white/10 text-slate-400">{dm?<Sun size={18}/>:<Moon size={18}/>}</button>
-          </div>
+      {/* SLIM TOP BAR */}
+      {view!=='dashboard'&&view!=='scan'&&view!=='camera'&&(
+        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:40,display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',background:'rgba(9,11,15,0.95)',borderBottom:'1px solid rgba(255,255,255,0.06)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)'}}>
+          <button onClick={()=>setView('dashboard')} style={{padding:'8px',borderRadius:'12px',background:'rgba(255,255,255,0.06)',border:'none',cursor:'pointer',color:'white',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><ChevronLeft size={20}/></button>
+          <span style={{fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:'16px',color:'white',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{
+            {list:'Inventario',repairs:'Servicios',budgets:'Presupuestos',clients:'Clientes',vehicles_list:'Vehículos',history:'Historial',stock_history:'Mov. Stock',stats:'Estadísticas',ai_assistant:'Asistente IA',config:'Configuración',details:'Detalle',add:'Nuevo Repuesto',add_repair:'Nuevo Servicio',edit_repair:'Editar Servicio',add_budget:'Nuevo Presupuesto',edit_budget:'Editar Presupuesto',add_client:'Nuevo Cliente',edit_client:'Editar Cliente',add_vehicle:'Nuevo Vehículo',edit_vehicle:'Editar Vehículo',edit_product:'Editar Repuesto',search:'Búsqueda',camera:'Cámara',scan:'Escáner QR'}[view]||view
+          }</span>
+          <button onClick={startQRScan} style={{padding:'8px',borderRadius:'12px',background:'rgba(249,115,22,0.1)',border:'none',cursor:'pointer',color:'#f97316',display:'flex',flexShrink:0}}><QrCode size={18}/></button>
         </div>
       )}
 
@@ -1083,8 +1077,7 @@ export default function App() {
             else if(view==='clients') setView('add_client');
             else if(view==='vehicles_list') setView('add_vehicle');
           }}
-          className="fixed bottom-32 right-5 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95"
-          style={{background:'linear-gradient(135deg,#ff6b1a,#e85510)',boxShadow:'0 8px 28px rgba(249,115,22,0.55),0 0 0 4px rgba(249,115,22,0.15)'}}
+          style={{position:'fixed',bottom:'130px',right:'20px',zIndex:200,width:'56px',height:'56px',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#ff6b1a,#e85510)',boxShadow:'0 8px 28px rgba(249,115,22,0.55),0 0 0 4px rgba(249,115,22,0.15)',cursor:'pointer',border:'none',transition:'transform 0.2s'}}
         >
           <Plus size={26} className="text-white"/>
         </button>
@@ -1092,13 +1085,13 @@ export default function App() {
 
       {/* NOTIFICATION */}
       {notification&&(
-        <div className={`fixed top-4 right-4 ${notification.type==='error'?'bg-red-600':'bg-slate-900'} text-white px-5 py-3 rounded-2xl shadow-2xl z-[400] flex items-center gap-3 anim`}>
-          {notification.type==='error'?<AlertCircle size={17}/>:<Check className="text-orange-400" size={17}/>}
-          <span className="font-bold text-sm">{notification.msg}</span>
+        <div style={{position:'fixed',top:'16px',left:'50%',transform:'translateX(-50%)',zIndex:400,display:'flex',alignItems:'center',gap:'10px',padding:'12px 20px',borderRadius:'16px',boxShadow:'0 8px 32px rgba(0,0,0,0.4)',animation:'slideUp 0.2s cubic-bezier(.22,1,.36,1)',whiteSpace:'nowrap',background:notification.type==='error'?'linear-gradient(135deg,#ef4444,#dc2626)':'linear-gradient(135deg,#111318,#1a1f2a)',border:notification.type==='error'?'1px solid rgba(239,68,68,0.3)':'1px solid rgba(249,115,22,0.3)'}}>
+          {notification.type==='error'?<AlertCircle size={16} color="white"/>:<Check size={16} color="#f97316"/>}
+          <span style={{fontWeight:700,fontSize:'13px',color:'white'}}>{notification.msg}</span>
         </div>
       )}
 
-      <main className={`p-4 md:p-8 max-w-4xl mx-auto ${view==='dashboard'?'pb-40':'pt-16 pb-40'}`}>
+      <main style={{padding:'16px',maxWidth:'640px',margin:'0 auto',paddingTop: view==='dashboard'?'16px':'72px',paddingBottom:'160px'}}>
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(
@@ -1128,19 +1121,38 @@ export default function App() {
               ))}
             </div>
 
-            {/* STATS — 2 números clave */}
+            {/* STATS */}
             <div className="grid grid-cols-2 gap-3">
-              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'20px',padding:'20px'}}>
-                <p style={{fontSize:'11px',color:'#6b7280',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:'8px'}}>Activos</p>
-                <p style={{fontSize:'36px',fontWeight:900,fontFamily:"'Outfit',sans-serif",color:'white',lineHeight:1}}>{repairs.filter(r=>r.status!=='entregado').length}</p>
-                <p style={{fontSize:'11px',color:'#6b7280',marginTop:'4px'}}>servicios en curso</p>
+              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'20px',padding:'18px'}}>
+                <p style={{fontSize:'11px',color:'#6b7280',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:'6px'}}>Activos</p>
+                <p style={{fontSize:'38px',fontWeight:900,fontFamily:"'Outfit',sans-serif",color:'white',lineHeight:1}}>{repairs.filter(r=>r.status!=='entregado').length}</p>
+                <p style={{fontSize:'11px',color:'#6b7280',marginTop:'4px'}}>en el taller</p>
               </div>
-              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'20px',padding:'20px'}}>
-                <p style={{fontSize:'11px',color:'#6b7280',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:'8px'}}>Por cobrar</p>
-                <p style={{fontSize:'28px',fontWeight:900,fontFamily:"'Outfit',sans-serif",color:'#f97316',lineHeight:1}}>${repairs.filter(r=>r.paymentStatus==='debe').reduce((s,r)=>s+(r.totalCost||0),0).toLocaleString()}</p>
-                <p style={{fontSize:'11px',color:'#6b7280',marginTop:'4px'}}>{repairs.filter(r=>r.paymentStatus==='debe').length} servicios</p>
+              <div style={{background:'rgba(249,115,22,0.08)',border:'1px solid rgba(249,115,22,0.15)',borderRadius:'20px',padding:'18px'}}>
+                <p style={{fontSize:'11px',color:'#f97316',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',marginBottom:'6px'}}>Por cobrar</p>
+                <p style={{fontSize:'24px',fontWeight:900,fontFamily:"'Outfit',sans-serif",color:'#f97316',lineHeight:1}}>${repairs.filter(r=>r.paymentStatus==='debe').reduce((s,r)=>s+(r.totalCost||0),0).toLocaleString()}</p>
+                <p style={{fontSize:'11px',color:'#f97316',opacity:0.6,marginTop:'4px'}}>{repairs.filter(r=>r.paymentStatus==='debe').length} pendientes</p>
               </div>
             </div>
+
+            {/* CHART - ingresos últimos 6 meses */}
+            {chartData.some(d=>d.total>0)&&(
+              <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'20px',padding:'18px'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
+                  <p style={{fontSize:'12px',fontWeight:700,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'1px'}}>Ingresos</p>
+                  <p style={{fontSize:'12px',color:'#6b7280'}}>últimos 6 meses</p>
+                </div>
+                <div style={{display:'flex',alignItems:'flex-end',gap:'6px',height:'72px'}}>
+                  {chartData.map((d,i)=>(
+                    <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'4px',height:'100%',justifyContent:'flex-end'}}>
+                      {d.total>0&&<p style={{fontSize:'9px',fontWeight:700,color:i===5?'#f97316':'#6b7280'}}>${(d.total/1000).toFixed(0)}k</p>}
+                      <div style={{width:'100%',borderRadius:'6px 6px 2px 2px',background:i===5?'linear-gradient(180deg,#f97316,#ea580c)':'rgba(255,255,255,0.08)',height:`${chartMax>0?(d.total/chartMax)*52:4}px`,minHeight:d.total>0?'4px':'2px',transition:'height 0.5s cubic-bezier(.22,1,.36,1)'}}/>
+                      <p style={{fontSize:'9px',color:'#4b5563',fontWeight:600}}>{d.month}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* SERVICIOS ACTIVOS — compacto */}
             {repairs.filter(r=>r.status!=='entregado').length>0&&(
@@ -1178,8 +1190,8 @@ export default function App() {
                 <p style={{fontSize:'13px',fontWeight:700,color:'white'}}>Facturación AFIP</p>
                 <p style={{fontSize:'11px',color:'#6b7280',marginTop:'2px'}}>{(tallerConfig.empresas||[])[0]?.cuit||'Configurá tu CUIT'}</p>
               </div>
-              <button onClick={()=>window.open('https://www.afip.gob.ar/landing/default.asp','_blank')} style={{background:'linear-gradient(135deg,#2563eb,#1d4ed8)',color:'white',border:'none',borderRadius:'12px',padding:'8px 16px',fontSize:'12px',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>
-                Ir a ARCA
+              <button onClick={()=>window.open('https://www.afip.gob.ar/landing/default.asp','_blank')} style={{background:'linear-gradient(135deg,#2563eb,#1d4ed8)',color:'white',border:'none',borderRadius:'12px',padding:'10px 18px',fontSize:'13px',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',boxShadow:'0 4px 16px rgba(37,99,235,0.4)'}}>
+                🧾 ARCA
               </button>
             </div>
 
@@ -1189,7 +1201,7 @@ export default function App() {
         {/* BÚSQUEDA */}
         {view==='search'&&globalSearch.length>1&&(
           <div className="space-y-4 anim">
-            <h2 className="page-title font-display">"{globalSearch}"</h2>
+            <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>"{globalSearch}"</h2>
             {globalResults?.clients.length>0&&<SSection title="Clientes" dm={dm}>{globalResults.clients.map(c=><div key={c.id} className={`py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}><p className="font-bold text-sm">{c.name}</p><p className="text-xs text-slate-400">{c.phone}</p></div>)}</SSection>}
             {globalResults?.repairs.length>0&&<SSection title="Servicios" dm={dm}>{globalResults.repairs.map(r=><div key={r.id} className={`py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'} flex justify-between items-center`}><div><p className="font-bold text-sm">{r.vehicle} {r.plate}</p><p className="text-xs text-slate-400">{r.clientName}</p></div><SPill status={r.status||'pendiente'}/></div>)}</SSection>}
             {globalResults?.vehicles.length>0&&<SSection title="Vehículos" dm={dm}>{globalResults.vehicles.map(v=><div key={v.id} className={`py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}><p className="font-bold text-sm">🚗 {v.make} {v.model} · <span className="font-mono">{v.plate}</span></p><p className="text-xs text-slate-400">{v.clientName}</p></div>)}</SSection>}
@@ -1202,7 +1214,7 @@ export default function App() {
         {view==='list'&&(
           <div className="space-y-4 anim">
             <div className="flex gap-3 justify-between items-center">
-              <h2 className="page-title font-display">Inventario</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Inventario</h2>
               <div className="flex gap-2 items-center">
                 <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
               </div>
@@ -1233,30 +1245,37 @@ export default function App() {
                 const matchStock = !invFilter.stock || (invFilter.stock==='low'&&p.quantity>0&&p.quantity<=p.minStock) || (invFilter.stock==='ok'&&p.quantity>p.minStock) || (invFilter.stock==='zero'&&p.quantity===0);
                 return matchSearch&&matchCat&&matchStock;
               }).map(item=>(
-                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} className={`card card-s card-hover cursor-pointer flex items-center gap-4 p-3.5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-                    {item.imageUrl?<img src={item.imageUrl} alt={item.name} className="inv-thumb"/>:<div className={`inv-thumb-placeholder ${dm?'bg-[#0d1117]':'bg-slate-100'}`}><Package size={20} className={dm?'text-slate-600':'text-slate-300'}/></div>}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{item.name}</h3>
-                        {item.quantity<=item.minStock&&<span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500"/>}
+                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} style={{background:'#111318',borderRadius:'16px',border:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:'12px',padding:'12px',cursor:'pointer',transition:'all 0.2s'}}
+                    onTouchStart={e=>e.currentTarget.style.background='#1a1f2a'} onTouchEnd={e=>e.currentTarget.style.background='#111318'}>
+                    {/* Thumbnail */}
+                    <div style={{width:'48px',height:'48px',borderRadius:'12px',overflow:'hidden',flexShrink:0,background:'rgba(255,255,255,0.05)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      {item.imageUrl?<img src={item.imageUrl} alt={item.name} style={{width:'48px',height:'48px',objectFit:'cover'}}/>:<Package size={18} color="#4b5563"/>}
+                    </div>
+                    {/* Info */}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'3px'}}>
+                        <p style={{fontWeight:700,fontSize:'14px',color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</p>
+                        {item.quantity<=item.minStock&&<span style={{width:'7px',height:'7px',borderRadius:'50%',background:'#ef4444',flexShrink:0}}/>}
                       </div>
-                      <div className={`flex items-center gap-3 mt-0.5 text-xs ${dm?'text-slate-500':'text-slate-400'}`}>
-                        {item.categoryId&&categories.find(c=>c.id===item.categoryId)&&<span className="px-1.5 py-0.5 rounded-md font-bold text-orange-500" style={{background:'rgba(249,115,22,0.1)',fontSize:'10px'}}>{categories.find(c=>c.id===item.categoryId).name}</span>}
-                        {item.location&&<span className="flex items-center gap-1"><MapPin size={9}/>{item.location}</span>}
-                        {item.supplier&&<span>🏪 {item.supplier}</span>}
+                      <div style={{display:'flex',gap:'8px',flexWrap:'wrap',alignItems:'center'}}>
+                        {item.categoryId&&categories.find(c=>c.id===item.categoryId)&&<span style={{fontSize:'10px',fontWeight:700,color:'#f97316',background:'rgba(249,115,22,0.1)',padding:'2px 6px',borderRadius:'6px'}}>{categories.find(c=>c.id===item.categoryId).name}</span>}
+                        {item.location&&<span style={{fontSize:'11px',color:'#6b7280'}}>📍 {item.location}</span>}
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className={`font-black font-display text-base ${dm?'text-white':'text-slate-900'}`}>${Number(item.cost).toLocaleString()}</p>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.quantity<=item.minStock?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-700'}`}>{item.quantity} un.</span>
+                    {/* Price & Stock */}
+                    <div style={{textAlign:'right',flexShrink:0}}>
+                      {item.salePrice>0&&<p style={{fontWeight:900,fontSize:'15px',color:'#10b981',fontFamily:"'Outfit',sans-serif"}}>${Number(item.salePrice).toLocaleString()}</p>}
+                      <p style={{fontWeight:700,fontSize:item.salePrice>0?'11px':'15px',color:item.salePrice>0?'#6b7280':'white'}}>${Number(item.cost).toLocaleString()}</p>
+                      <span style={{fontSize:'10px',fontWeight:700,padding:'2px 8px',borderRadius:'20px',background:item.quantity<=item.minStock?'rgba(239,68,68,0.15)':'rgba(16,185,129,0.15)',color:item.quantity<=item.minStock?'#ef4444':'#10b981'}}>{item.quantity} un.</span>
                     </div>
-                    <div className="flex gap-1 flex-shrink-0" onClick={e=>e.stopPropagation()}>
-                      <button onClick={()=>{setEditingProduct({...item});setView('edit_product');}} className={`p-2 rounded-xl transition-colors ${dm?'hover:bg-[#0d1117] text-slate-400':'hover:bg-slate-100 text-slate-500'}`}><Edit3 size={14}/></button>
-                      <button onClick={()=>deleteItem('inventory',item.id,item.name)} className="p-2 rounded-xl text-red-400 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button>
+                    {/* Actions */}
+                    <div style={{display:'flex',flexDirection:'column',gap:'4px',flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                      <button onClick={()=>{setEditingProduct({...item});setView('edit_product');}} style={{padding:'6px',borderRadius:'10px',background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer',color:'#9ca3af'}}><Edit3 size={13}/></button>
+                      <button onClick={()=>deleteItem('inventory',item.id,item.name)} style={{padding:'6px',borderRadius:'10px',background:'rgba(239,68,68,0.08)',border:'none',cursor:'pointer',color:'#ef4444'}}><Trash2 size={13}/></button>
                     </div>
                   </div>
                 ))}
-                {inventory.length===0&&<EC icon={<Package size={36}/>} text="Sin repuestos" dm={dm}/>}
+                {inventory.length===0&&<EC icon={<Package size={36}/>} text={configLoaded?"Sin repuestos":"Cargando..."} dm={dm}/>}
               </div>
             ):(
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -1286,7 +1305,7 @@ export default function App() {
                     </div>
                   </div>
                 ))}
-                {inventory.length===0&&<EC icon={<Package size={36}/>} text="Sin repuestos" dm={dm} className="col-span-2"/>}
+                {inventory.length===0&&<EC icon={<Package size={36}/>} text={configLoaded?"Sin repuestos":"Cargando..."} dm={dm} className="col-span-2"/>}
               </div>
             )}
           </div>
@@ -1328,26 +1347,28 @@ export default function App() {
         {view==='repairs'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Servicios</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Servicios</h2>
               <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
               {Object.entries(STATUS_CONFIG).map(([key,cfg])=>(
-                <span key={key} className={`status-pill ${cfg.tw}`}><span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}/>{cfg.icon} {cfg.label} ({repairs.filter(r=>(r.status||'pendiente')===key).length})</span>
+                <span key={key} style={{padding:'4px 12px',borderRadius:'20px',fontSize:'11px',fontWeight:700,display:'inline-flex',alignItems:'center',gap:'5px',background:'rgba(255,255,255,0.05)',color:'#9ca3af',border:'1px solid rgba(255,255,255,0.08)'}}>
+                  {cfg.icon} {cfg.label} <span style={{color:'#f97316'}}>({repairs.filter(r=>(r.status||'pendiente')===key).length})</span>
+                </span>
               ))}
             </div>
             {listMode==='grid'&&(
               <div className="grid grid-cols-2 gap-3">
                 {[...repairs].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
-                  <div key={rep.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
+                  <div key={rep.id} style={{background:'#111318',borderRadius:'18px',padding:'16px',border:'1px solid rgba(255,255,255,0.06)',borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       {rep.orderNumber&&<span className="text-[10px] font-bold text-orange-500 font-mono">{rep.orderNumber}</span>}
                       <SPill status={rep.status||'pendiente'}/>
                     </div>
-                    <h4 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle}</h4>
-                    {rep.plate&&<span className={`font-mono text-xs ${dm?'text-slate-400':'text-slate-500'}`}>{rep.plate}</span>}
-                    {rep.clientName&&<p className="text-xs text-slate-400 mt-0.5">{rep.clientName}</p>}
-                    <p className="font-black text-emerald-500 font-display mt-1">${rep.totalCost?.toLocaleString()}</p>
+                    <p style={{fontWeight:800,fontSize:'14px',color:'white',marginBottom:'2px'}}>{rep.vehicle}</p>
+                    {rep.plate&&<span style={{fontFamily:'monospace',fontSize:'11px',color:'#6b7280'}}>{rep.plate}</span>}
+                    {rep.clientName&&<p style={{fontSize:'11px',color:'#6b7280',marginTop:'2px'}}>{rep.clientName}</p>}
+                    <p style={{fontWeight:900,color:'#10b981',fontSize:'16px',marginTop:'4px'}}>${(rep.totalCost||0).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -1355,44 +1376,49 @@ export default function App() {
             {listMode==='list'&&(
             <div className="space-y-4">
             {[...repairs].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
-              <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
-                {rep.imageUrl&&<img src={rep.imageUrl} alt="" className="w-full h-36 object-cover rounded-2xl mb-4"/>}
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      {rep.orderNumber&&<span className="text-xs font-bold text-orange-500 font-mono">{rep.orderNumber}</span>}
-                      <h4 className={`font-bold text-sm ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle}</h4>
-                      {rep.plate&&<span className={`font-mono text-xs px-2 py-0.5 rounded-lg ${dm?'bg-[#0d1117] text-slate-400':'bg-slate-100 text-slate-500'}`}>{rep.plate}</span>}
-                      <SPill status={rep.status||'pendiente'}/>
+              <div key={rep.id} style={{background:'#111318',borderRadius:'20px',overflow:'hidden',border:'1px solid rgba(255,255,255,0.06)'}}>
+                <div style={{height:'3px',background:rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}}/>
+                {rep.imageUrl&&<img src={rep.imageUrl} alt="" style={{width:'100%',height:'160px',objectFit:'cover'}}/>}
+                <div style={{padding:'16px'}}>
+                  {/* Header */}
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'10px'}}>
+                    <div style={{flex:1,minWidth:0,marginRight:'12px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'5px',flexWrap:'wrap'}}>
+                        {rep.orderNumber&&<span style={{fontSize:'10px',fontWeight:700,color:'#f97316',fontFamily:'monospace',background:'rgba(249,115,22,0.1)',padding:'2px 7px',borderRadius:'7px'}}>{rep.orderNumber}</span>}
+                        <SPill status={rep.status||'pendiente'}/>
+                        <PayBadge status={rep.paymentStatus||'debe'}/>
+                      </div>
+                      <p style={{fontWeight:800,fontSize:'16px',color:'white',marginBottom:'3px'}}>{rep.vehicle}</p>
+                      <div style={{display:'flex',gap:'10px',flexWrap:'wrap'}}>
+                        {rep.plate&&<span style={{fontSize:'11px',color:'#6b7280',fontFamily:'monospace'}}>{rep.plate}</span>}
+                        {rep.km&&<span style={{fontSize:'11px',color:'#6b7280'}}>🔢 {Number(rep.km).toLocaleString()} km</span>}
+                        {rep.clientName&&<span style={{fontSize:'11px',color:'#6b7280'}}>👤 {rep.clientName}</span>}
+                        {rep.date?.seconds&&<span style={{fontSize:'11px',color:'#6b7280'}}>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}
+                      </div>
                     </div>
-                    <div className={`flex gap-3 text-xs flex-wrap ${dm?'text-slate-400':'text-slate-400'}`}>
-                      {rep.clientName&&<span className="flex items-center gap-1"><Users size={10}/>{rep.clientName}</span>}
-                      {rep.km&&<span>🔢 {Number(rep.km).toLocaleString()} km</span>}
-                      {rep.date?.seconds&&<span>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}
-                      {rep.createdBy&&<span className="flex items-center gap-1"><User size={10}/>{rep.createdBy}</span>}
+                    <div style={{textAlign:'right',flexShrink:0}}>
+                      <p style={{fontWeight:900,fontSize:'22px',color:'#10b981',fontFamily:"'Outfit',sans-serif",lineHeight:1}}>${(rep.totalCost||0).toLocaleString()}</p>
+                      {(()=>{const paid=(rep.payments||[]).reduce((s,p)=>s+p.amount,0);return paid>0?<p style={{fontSize:'11px',color:'#f97316',fontWeight:700,marginTop:'2px'}}>Pagó ${paid.toLocaleString()}</p>:null;})()}
+                      {(()=>{const g=(rep.totalCost||0)-(rep.partsUsed||[]).reduce((s,p)=>s+(p.costOriginal||p.cost)*p.qty,0);return g>0?<p style={{fontSize:'11px',color:'#3b82f6',fontWeight:700}}>Gan ${g.toLocaleString()}</p>:null;})()}
                     </div>
                   </div>
-                  <div className="text-right ml-3">
-                    <p className="font-black text-emerald-500 text-xl font-display">${rep.totalCost?.toLocaleString()}</p>
-                    {(rep.payments||[]).length>0&&(()=>{const paid=(rep.payments||[]).reduce((s,p)=>s+p.amount,0);return<p className="text-xs font-bold text-orange-400">Pagó ${paid.toLocaleString()}</p>;})()}
-                    {rep.laborCost>0&&<p className="text-xs text-slate-400">MO: ${Number(rep.laborCost).toLocaleString()}</p>}
-                    {(()=>{const ganancia=(rep.totalCost||0)-(rep.partsUsed||[]).reduce((s,p)=>s+(p.costOriginal||p.cost)*p.qty,0);return ganancia>0?<p className="text-xs font-bold text-blue-400">Gan: ${ganancia.toLocaleString()}</p>:null;})()}
+                  {/* Description */}
+                  {rep.description&&<p style={{fontSize:'13px',color:'#9ca3af',marginBottom:'10px',fontStyle:'italic',lineHeight:1.5}}>{rep.description}</p>}
+                  {rep.notes&&<div style={{fontSize:'12px',background:'rgba(245,158,11,0.08)',color:'#fbbf24',padding:'8px 12px',borderRadius:'10px',marginBottom:'10px'}}>📝 {rep.notes}</div>}
+                  {/* Parts */}
+                  {rep.partsUsed?.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:'4px',marginBottom:'12px'}}>{rep.partsUsed.map((p,i)=><span key={i} style={{fontSize:'10px',fontWeight:700,color:'#9ca3af',background:'rgba(255,255,255,0.05)',padding:'3px 8px',borderRadius:'8px'}}>{p.qty}× {p.name}</span>)}</div>}
+                  {/* Status */}
+                  <div style={{display:'flex',gap:'4px',flexWrap:'wrap',marginBottom:'10px'}}>
+                    {Object.keys(STATUS_CONFIG).map(s=><button key={s} onClick={()=>updateRepairField(rep.id,'status',s)} style={{fontSize:'10px',fontWeight:700,padding:'5px 10px',borderRadius:'10px',border:'none',cursor:'pointer',background:(rep.status||'pendiente')===s?'#f97316':'rgba(255,255,255,0.05)',color:(rep.status||'pendiente')===s?'white':'#6b7280',transition:'all 0.15s'}}>{STATUS_CONFIG[s].icon} {STATUS_CONFIG[s].label}</button>)}
+                    {Object.entries(PAYMENT_CONFIG).map(([key,cfg])=><button key={key} onClick={()=>updateRepairField(rep.id,'paymentStatus',key)} style={{fontSize:'10px',fontWeight:700,padding:'5px 10px',borderRadius:'10px',cursor:'pointer',background:(rep.paymentStatus||'debe')===key?cfg.bg:'rgba(255,255,255,0.05)',color:(rep.paymentStatus||'debe')===key?cfg.color:'#6b7280',border:`1px solid ${(rep.paymentStatus||'debe')===key?cfg.color:'transparent'}`,transition:'all 0.15s'}}>{cfg.icon} {cfg.label}</button>)}
                   </div>
-                </div>
-                {rep.description&&<p className={`text-sm italic mb-2 ${dm?'text-slate-400':'text-slate-500'}`}>{rep.description}</p>}
-                {rep.notes&&<div className={`text-xs rounded-xl p-2.5 mb-3 ${dm?'bg-amber-900/20 text-amber-400':'bg-amber-50 text-slate-600'}`}>📝 {rep.notes}</div>}
-                {rep.partsUsed?.length>0&&<div className="flex flex-wrap gap-1 mb-3">{rep.partsUsed.map((p,i)=><span key={i} className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${dm?'bg-[#0d1117] text-slate-400':'bg-slate-100 text-slate-600'}`}>{p.qty}x {p.name}</span>)}</div>}
-                <div className={`flex items-center justify-between pt-3 border-t flex-wrap gap-2 ${dm?'border-[#30363d]':'border-slate-50'}`}>
-                  <div className="flex gap-1 flex-wrap">
-                    {Object.keys(STATUS_CONFIG).map(s=><button key={s} onClick={()=>updateRepairField(rep.id,'status',s)} className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all ${(rep.status||'pendiente')===s?'bg-orange-500 text-white':dm?'bg-[#21262d] text-slate-400 hover:text-slate-200':'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{STATUS_CONFIG[s].icon} {STATUS_CONFIG[s].label}</button>)}
-                    {Object.entries(PAYMENT_CONFIG).map(([key,cfg])=><button key={key} onClick={()=>updateRepairField(rep.id,'paymentStatus',key)} className="text-[10px] font-bold px-2 py-1.5 rounded-lg transition-all" style={{background:(rep.paymentStatus||'debe')===key?cfg.bg:'transparent',color:cfg.color,border:`1px solid ${(rep.paymentStatus||'debe')===key?cfg.color:'rgba(100,116,139,0.25)'}`}}>{cfg.icon}</button>)}
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap">
-                    <button onClick={()=>{setEditingRepair({...rep});setClientSearch(rep.clientName||'');setView('edit_repair');}} className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl ${dm?'bg-[#21262d] text-slate-300 hover:text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}><Edit3 size={11}/>Editar</button>
-                    <button onClick={()=>{setShowPaymentModal(rep.id);setPaymentAmount('');}} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500"><DollarSign size={11}/>Pago</button>
-                    {(rep.status==='listo'||rep.status==='entregado')&&<button onClick={()=>openConvertToBudget(rep)} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-blue-500/10 text-blue-400"><FileText size={11}/>Pres.</button>}
-                    <button onClick={()=>printWorkOrder(rep)} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-slate-500/10 text-slate-400"><Printer size={11}/>OT</button>
-                    <button onClick={()=>deleteItem('repairs',rep.id,`${rep.vehicle}`)} className="p-1.5 text-red-400 rounded-xl"><Trash2 size={12}/></button>
+                  {/* Actions */}
+                  <div style={{display:'flex',gap:'6px',flexWrap:'wrap',borderTop:'1px solid rgba(255,255,255,0.05)',paddingTop:'10px'}}>
+                    <button onClick={()=>{setEditingRepair({...rep});setClientSearch(rep.clientName||'');setView('edit_repair');}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.06)',color:'#e2e8f0',border:'none',cursor:'pointer'}}><Edit3 size={12}/>Editar</button>
+                    <button onClick={()=>{setShowPaymentModal(rep.id);setPaymentAmount('');}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(16,185,129,0.1)',color:'#10b981',border:'none',cursor:'pointer'}}><DollarSign size={12}/>Pago</button>
+                    {(rep.status==='listo'||rep.status==='entregado')&&<button onClick={()=>openConvertToBudget(rep)} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(59,130,246,0.1)',color:'#3b82f6',border:'none',cursor:'pointer'}}><FileText size={12}/>Pres.</button>}
+                    <button onClick={()=>printWorkOrder(rep)} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.05)',color:'#9ca3af',border:'none',cursor:'pointer'}}><Printer size={12}/>OT</button>
+                    <button onClick={()=>deleteItem('repairs',rep.id,`${rep.vehicle}`)} style={{marginLeft:'auto',padding:'8px 10px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',color:'#ef4444',border:'none',cursor:'pointer'}}><Trash2 size={13}/></button>
                   </div>
                 </div>
               </div>
@@ -1407,7 +1433,7 @@ export default function App() {
         {view==='budgets'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Presupuestos</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Presupuestos</h2>
               <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
             {listMode==='grid'&&(
@@ -1415,11 +1441,12 @@ export default function App() {
                 {[...budgets].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
                   const emp2=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
                   return (
-                    <div key={budget.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
-                      <h4 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{budget.clientName||'—'}</h4>
-                      <p className={`text-xs truncate ${dm?'text-slate-400':'text-slate-500'}`}>{budget.vehicle}</p>
-                      <p className="text-xs text-slate-400">📅 {budget.date?new Date(budget.date+'T12:00:00').toLocaleDateString('es-AR'):'—'}</p>
-                      <p className="font-black text-blue-500 font-display mt-1">${budget.totalCost?.toLocaleString()}</p>
+                    <div key={budget.id} style={{background:'#111318',borderRadius:'16px',padding:'14px',border:'1px solid rgba(59,130,246,0.15)',borderTop:'3px solid #3b82f6'}}>
+                      {budget.budgetNumber&&<span style={{fontSize:'10px',fontWeight:700,color:'#3b82f6',fontFamily:'monospace',display:'block',marginBottom:'4px'}}>#{budget.budgetNumber}</span>}
+                      <p style={{fontWeight:700,fontSize:'14px',color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{budget.clientName||'—'}</p>
+                      <p style={{fontSize:'11px',color:'#6b7280',marginTop:'2px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{budget.vehicle}</p>
+                      <p style={{fontSize:'11px',color:'#4b5563',marginTop:'4px'}}>📅 {budget.date?new Date(budget.date+'T12:00:00').toLocaleDateString('es-AR'):'—'}</p>
+                      <p style={{fontWeight:900,fontSize:'18px',color:'#3b82f6',fontFamily:"'Outfit',sans-serif",marginTop:'6px'}}>${(budget.totalCost||0).toLocaleString()}</p>
                     </div>
                   );
                 })}
@@ -1428,27 +1455,28 @@ export default function App() {
             {listMode==='list'&&[...budgets].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
               const emp=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
               return (
-                <div key={budget.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #3b82f6'}}>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-2">
-                    {budget.budgetNumber&&<span className="text-xs font-bold text-blue-400 font-mono">#{budget.budgetNumber}</span>}
-                    <h4 className="font-bold">{budget.clientName}</h4>
-                  </div>
-                      <p className={`text-sm ${dm?'text-slate-400':'text-slate-500'}`}>{budget.vehicle}{budget.plate&&` · ${budget.plate}`}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-xs text-slate-400">📅 {budget.date?new Date(budget.date+'T12:00:00').toLocaleDateString('es-AR'):'—'}</p>
-                        {emp&&<span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">🏢 {emp.nombre}</span>}
+                <div key={budget.id} style={{background:'#111318',borderRadius:'20px',overflow:'hidden',border:'1px solid rgba(255,255,255,0.06)'}}>
+                  <div style={{height:'3px',background:'linear-gradient(90deg,#3b82f6,#6366f1)'}}/>
+                  <div style={{padding:'16px'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'10px'}}>
+                      <div style={{flex:1,minWidth:0,marginRight:'12px'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px'}}>
+                          {budget.budgetNumber&&<span style={{fontSize:'10px',fontWeight:700,color:'#3b82f6',fontFamily:'monospace',background:'rgba(59,130,246,0.1)',padding:'2px 8px',borderRadius:'7px'}}>#{budget.budgetNumber}</span>}
+                          <p style={{fontWeight:800,fontSize:'15px',color:'white'}}>{budget.clientName||'—'}</p>
+                        </div>
+                        <p style={{fontSize:'13px',color:'#9ca3af',marginBottom:'3px'}}>{budget.vehicle}{budget.plate&&` · ${budget.plate}`}</p>
+                        <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+                          <span style={{fontSize:'11px',color:'#6b7280'}}>📅 {budget.date?new Date(budget.date+'T12:00:00').toLocaleDateString('es-AR'):'—'}</span>
+                          {emp&&<span style={{fontSize:'10px',fontWeight:700,color:'#3b82f6',background:'rgba(59,130,246,0.08)',padding:'2px 8px',borderRadius:'8px'}}>🏢 {emp.nombre}</span>}
+                        </div>
                       </div>
+                      <p style={{fontWeight:900,fontSize:'22px',color:'#3b82f6',fontFamily:"'Outfit',sans-serif",flexShrink:0}}>${(budget.totalCost||0).toLocaleString()}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <p className="text-xl font-black text-blue-500 font-display">${budget.totalCost?.toLocaleString()}</p>
-                      <div className="flex gap-1.5 flex-wrap justify-end">
-                        <button onClick={()=>sendWhatsApp(budget)} className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl" style={{background:'rgba(34,197,94,0.12)',color:'#16a34a'}}><MessageCircle size={12}/>WhatsApp</button>
-                        <button onClick={()=>printBudget(budget)} className="btn-dark text-xs py-1.5 px-2.5"><Printer size={12}/>Print</button>
-                        <button onClick={()=>{setEditingBudget({...budget});setClientSearchB(budget.clientName||'');setView('edit_budget');}} className={`btn-ghost text-xs py-1.5 px-2.5 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}><Edit3 size={12}/></button>
-                        <button onClick={()=>deleteItem('budgets',budget.id,budget.clientName)} className="p-1.5 text-red-400 rounded-xl"><Trash2 size={13}/></button>
-                      </div>
+                    <div style={{display:'flex',gap:'6px',flexWrap:'wrap',borderTop:'1px solid rgba(255,255,255,0.05)',paddingTop:'10px'}}>
+                      <button onClick={()=>sendWhatsApp(budget)} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(34,197,94,0.1)',color:'#22c55e',border:'none',cursor:'pointer'}}><MessageCircle size={12}/>WhatsApp</button>
+                      <button onClick={()=>printBudget(budget)} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.06)',color:'#e2e8f0',border:'none',cursor:'pointer'}}><Printer size={12}/>Imprimir</button>
+                      <button onClick={()=>{setEditingBudget({...budget});setClientSearchB(budget.clientName||'');setView('edit_budget');}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 12px',borderRadius:'12px',background:'rgba(255,255,255,0.05)',color:'#9ca3af',border:'none',cursor:'pointer'}}><Edit3 size={12}/></button>
+                      <button onClick={()=>deleteItem('budgets',budget.id,budget.clientName)} style={{marginLeft:'auto',padding:'8px 10px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',color:'#ef4444',border:'none',cursor:'pointer'}}><Trash2 size={13}/></button>
                     </div>
                   </div>
                 </div>
@@ -1462,13 +1490,13 @@ export default function App() {
         {view==='clients'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Clientes</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Clientes</h2>
               <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
             {listMode==='grid'&&(
               <div className="grid grid-cols-2 gap-3">
                 {clients.map(c2=>(
-                  <div key={c2.id} className={`card card-s p-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #8b5cf6'}}>
+                  <div key={c2.id} style={{background:'#111318',borderRadius:'18px',padding:'16px',border:'1px solid rgba(255,255,255,0.06)'}} style={{borderLeft:'3px solid #8b5cf6'}}>
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-black text-sm mb-2" style={{background:'linear-gradient(135deg,#8b5cf6,#7c3aed)'}}>{c2.name?.[0]}</div>
                     <h4 className={`font-bold text-sm truncate ${dm?'text-white':'text-slate-900'}`}>{c2.name}</h4>
                     {c2.phone&&<p className="text-xs text-slate-400">{c2.phone}</p>}
@@ -1478,7 +1506,7 @@ export default function App() {
               </div>
             )}
             {listMode==='list'&&clients.map(client=>(
-              <div key={client.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #8b5cf6'}}>
+              <div key={client.id} style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}} style={{borderLeft:'3px solid #8b5cf6'}}>
                 <div className="flex justify-between items-start mb-2">
                   <div><h4 className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{client.name}</h4>{client.phone&&<p className={`text-sm mt-0.5 ${dm?'text-slate-400':'text-slate-500'}`}>📞 {client.phone}</p>}{client.email&&<p className={`text-xs ${dm?'text-slate-500':'text-slate-400'}`}>{client.email}</p>}</div>
                   <div className="flex gap-2">
@@ -1506,7 +1534,7 @@ export default function App() {
         {view==='vehicles_list'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Vehículos</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Vehículos</h2>
               <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
             {vehicles.map(v=>(
@@ -1534,7 +1562,7 @@ export default function App() {
             <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15}/><input className={`inp pl-9 ${dm?'bg-[#161b22] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} placeholder="Patente o modelo..." value={vehicleFilter} onChange={e=>setVehicleFilter(e.target.value)}/></div>
             {vehicleFilter&&vehicleHistory.length===0&&<div className={`card card-s p-8 text-center text-sm ${dm?'bg-[#161b22] text-slate-500':'bg-white text-slate-400'}`}>Sin registros para "{vehicleFilter}"</div>}
             {[...vehicleHistory].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
-              <div key={rep.id} className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
+              <div key={rep.id} style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}} style={{borderLeft:`3px solid ${rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}`}}>
                 <div className="flex justify-between items-start mb-1">
                   <div><h4 className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{rep.vehicle} <span className="font-mono text-sm text-slate-400">{rep.plate}</span></h4>
                     <div className={`flex gap-3 text-xs mt-0.5 ${dm?'text-slate-500':'text-slate-400'}`}>{rep.km&&<span>🔢 {Number(rep.km).toLocaleString()} km</span>}{rep.date?.seconds&&<span>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}</div></div>
@@ -1551,7 +1579,7 @@ export default function App() {
         {view==='stock_history'&&(
           <div className="space-y-4 anim">
             <div className="flex justify-between items-center">
-              <h2 className="page-title font-display">Movimientos</h2>
+              <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Movimientos</h2>
               <DangerBtn onClick={()=>deleteAll('stock_history')}/>
             </div>
             <div className={`card card-s overflow-hidden ${dm?'bg-[#161b22]':'bg-white'}`}>
@@ -1592,7 +1620,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+            <div style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}}>
               <p className={`font-display font-bold mb-4 text-sm ${dm?'text-white':'text-slate-800'}`}>Ingresos últimos 6 meses</p>
               <div className="flex items-end gap-2 h-32">
                 {chartData.map((d,i)=>(
@@ -1605,7 +1633,7 @@ export default function App() {
               </div>
             </div>
             {topServices.length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+              <div style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}}>
                 <p className="font-display font-bold mb-3 text-sm flex items-center gap-2"><Award size={15} className="text-orange-500"/>Servicios más frecuentes</p>
                 {topServices.map(([name,count],i)=>(
                   <div key={i} className={`flex items-center gap-3 py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}>
@@ -1617,7 +1645,7 @@ export default function App() {
               </div>
             )}
             {topParts.length>0&&(
-              <div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
+              <div style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}}>
                 <p className={`font-display font-bold mb-3 text-sm flex items-center gap-2 ${dm?'text-white':'text-slate-800'}`}><Package size={15} className="text-orange-500"/>Repuestos más usados</p>
                 {topParts.map(([name,qty],i)=>(
                   <div key={i} className={`flex items-center gap-3 py-2 border-b last:border-0 ${dm?'border-[#30363d]':'border-slate-50'}`}>
@@ -1844,6 +1872,8 @@ export default function App() {
           <VehForm isEdit={view==='edit_vehicle'} data={view==='edit_vehicle'?editingVehicle:newVehicleForm} setData={view==='edit_vehicle'?setEditingVehicle:setNewVehicleForm} onSubmit={view==='edit_vehicle'?updateVehicle:saveVehicle} onCancel={()=>{setView('vehicles_list');setEditingVehicle(null);}} clients={clients} dm={dm}/>
         )}
 
+      </main>
+
         {/* QR SCAN */}
         {view==='scan'&&(
           <div className="fixed inset-0 z-[100] flex flex-col" style={{background:'#000',position:'fixed'}}>
@@ -1862,8 +1892,8 @@ export default function App() {
               </button>
             </div>
             {/* Viewfinder */}
-            <div className="flex-1 relative flex items-center justify-center" style={{position:'relative'}}>
-              <div id="qr-reader" className="w-full max-w-sm"/>
+            <div style={{flex:1,position:'relative',overflow:'hidden',minHeight:'300px'}}>
+              <div id="qr-reader" style={{position:'absolute',inset:0,width:'100%',height:'100%'}}/>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="relative" style={{width:'260px',height:'160px'}}>
                   {[['top-0 left-0 border-t-4 border-l-4 rounded-tl-2xl'],['top-0 right-0 border-t-4 border-r-4 rounded-tr-2xl'],['bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl'],['bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl']].map(([cls],i)=>(
@@ -1899,10 +1929,10 @@ export default function App() {
               <p className="text-white font-bold text-sm">{capturedPhoto?'Revisar':'Tomar foto'}</p>
               {capturedPhoto?<button onClick={()=>setCapturedPhoto(null)} className="p-3 rounded-full" style={{background:'rgba(0,0,0,0.5)'}}><RefreshCw size={18} className="text-white"/></button>:<div style={{width:48}}/>}
             </div>
-            <div className="flex-1 relative overflow-hidden flex items-center justify-center" style={{background:'#000'}}>
-              <video ref={videoRef} autoPlay playsInline muted className="w-full object-cover" style={{display:capturedPhoto?'none':'block',maxHeight:'70vh'}}/>
-              {capturedPhoto&&<div className="flex items-center justify-center w-full h-full"><img src={capturedPhoto} className="object-contain rounded-2xl" style={{maxHeight:'70vh',maxWidth:'100%'}} alt=""/></div>}
-              {!capturedPhoto&&<div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-72 h-72 rounded-3xl border-2 border-white opacity-25"/></div>}
+            <div style={{flex:1,position:'relative',overflow:'hidden',background:'#000'}}>
+              <video ref={videoRef} autoPlay playsInline muted style={{display:capturedPhoto?'none':'block',width:'100%',height:'100%',objectFit:'cover',position:'absolute',inset:0}}/>
+              {capturedPhoto&&<img src={capturedPhoto} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'contain'}} alt=""/>}
+              {!capturedPhoto&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}><div style={{width:'220px',height:'220px',borderRadius:'24px',border:'2px solid rgba(255,255,255,0.3)'}}/></div>}
             </div>
             <div className="p-8 flex items-center justify-center gap-8" style={{background:'rgba(0,0,0,0.7)'}}>
               {!capturedPhoto?(
@@ -1916,7 +1946,7 @@ export default function App() {
             </div>
           </div>
         )}
-      </main>
+
     </div>
   );
 }
@@ -1925,19 +1955,23 @@ export default function App() {
 
 function SPill({status}){const c=STATUS_CONFIG[status]||STATUS_CONFIG.pendiente;return<span className={`status-pill ${c.tw}`}><span className={`w-1.5 h-1.5 rounded-full ${c.dot}`}/>{c.icon} {c.label}</span>;}
 function PayBadge({status}){const c=PAYMENT_CONFIG[status]||PAYMENT_CONFIG.debe;return<span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{background:c.bg,color:c.color}}>{c.icon} {c.label}</span>;}
-function SSection({title,children,dm}){return<div className={`card card-s p-5 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}><p className="lbl mb-3">{title}</p>{children}</div>;}
+function SSection({title,children,dm}){return<div style={{background:'#111318',borderRadius:'18px',padding:'20px',border:'1px solid rgba(255,255,255,0.06)'}}><p className="lbl mb-3">{title}</p>{children}</div>;}
 function EC({icon,text,dm,className=''}){return<div className={`card card-s p-12 text-center ${dm?'bg-[#161b22] card-dark text-slate-500':'bg-white text-slate-400'} ${className}`}><div className="mx-auto mb-3 opacity-20 flex justify-center">{icon}</div><p className="text-sm font-medium">{text}</p></div>;}
 function DangerBtn({onClick}){return<button onClick={onClick} className="p-2.5 rounded-xl text-red-400 border" style={{borderColor:'rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.08)'}}><Trash2 size={16}/></button>;}
 
 function FCard({children,title,onCancel,dm,onSubmit}){
-  return<form onSubmit={onSubmit} className={`card card-s p-5 md:p-6 space-y-4 max-w-xl mx-auto anim ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
-    <div className="flex items-center gap-3"><button type="button" onClick={onCancel} className={`p-2 rounded-xl ${dm?'bg-[#0d1117] text-slate-300':'bg-slate-100 text-slate-700'}`}><ChevronLeft size={18}/></button><h2 className={`font-display font-black text-xl ${dm?'text-white':'text-slate-900'}`}>{title}</h2></div>
+  return<form onSubmit={onSubmit} style={{background:'#111318',borderRadius:'24px',padding:'20px',maxWidth:'560px',margin:'0 auto',border:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',gap:'16px'}} className="anim">
+    <div style={{display:'flex',alignItems:'center',gap:'12px',paddingBottom:'16px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+      <button type="button" onClick={onCancel} style={{padding:'8px',borderRadius:'12px',background:'rgba(255,255,255,0.06)',border:'none',cursor:'pointer',color:'white',display:'flex'}}><ChevronLeft size={18}/></button>
+      <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'20px',color:'white'}}>{title}</h2>
+    </div>
     {children}
   </form>;
 }
-function FInp({label,dm,...p}){return<div>{label&&<span className="lbl">{label}</span>}<input className={`inp ${dm?'bg-[#0d1117] border-[#30363d] text-white placeholder-slate-600':'bg-slate-50 border-slate-200'}`} {...p}/></div>;}
-function FTA({label,dm,...p}){return<div>{label&&<span className="lbl">{label}</span>}<textarea className={`inp h-20 resize-none ${dm?'bg-[#0d1117] border-[#30363d] text-white placeholder-slate-600':'bg-slate-50 border-slate-200'}`} {...p}/></div>;}
-function FBtn({children,color}){return<button type="submit" className="btn-primary" style={color?{background:color}:{}}>{children}</button>;}
+function FInp({label,dm,...p}){return<div><span style={{fontSize:'11px',fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'1px',display:'block',marginBottom:'6px'}}>{label}</span><input style={{borderRadius:'12px',padding:'11px 14px',width:'100%',outline:'none',fontSize:'14px',background:'rgba(255,255,255,0.05)',border:'1.5px solid rgba(255,255,255,0.08)',color:'white',fontFamily:"'Space Grotesk',sans-serif",transition:'border-color 0.2s'}} onFocus={e=>e.target.style.borderColor='#f97316'} onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.08)'} {...p}/></div>;}
+function FTA({label,dm,...p}){return<div><span style={{fontSize:'11px',fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'1px',display:'block',marginBottom:'6px'}}>{label}</span><textarea style={{borderRadius:'12px',padding:'11px 14px',width:'100%',outline:'none',fontSize:'14px',background:'rgba(255,255,255,0.05)',border:'1.5px solid rgba(255,255,255,0.08)',color:'white',fontFamily:"'Space Grotesk',sans-serif",resize:'none',height:'80px',transition:'border-color 0.2s'}} onFocus={e=>e.target.style.borderColor='#f97316'} onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.08)'} {...p}/></div>;}
+function FBtn({children,color}){return<button type="submit" style={{background:color||'linear-gradient(135deg,#ff6b1a,#e85510)',color:'white',padding:'14px 20px',borderRadius:'14px',fontWeight:700,display:'flex',alignItems:'center',gap:'8px',justifyContent:'center',cursor:'pointer',border:'none',width:'100%',fontSize:'15px',boxShadow:'0 4px 20px rgba(249,115,22,0.35)',letterSpacing:'0.2px'}}>{children}</button>;}
+
 
 function CDrop({cs,setCs,showDD,setShowDD,clients,onSC,dm}){
   return<div className="relative">

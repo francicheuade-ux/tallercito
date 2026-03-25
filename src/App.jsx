@@ -372,6 +372,34 @@ export default function App() {
     await addDoc(collection(db,'artifacts',appId,'public','data','stock_history'),{productId,productName,delta,reason,date:serverTimestamp(),user:currentUser?.name||'Sistema'});
   };
 
+  // Inline client+vehicle creation from repair form
+  const createClientAndVehicle = async (clientData, vehicleData, setRepairData) => {
+    try {
+      const clientRef = await addDoc(collection(db,'artifacts',appId,'public','data','clients'), {
+        name: clientData.name, phone: clientData.phone||'', email: clientData.email||'',
+        createdAt: serverTimestamp(), createdBy: currentUser?.name
+      });
+      const clientId = clientRef.id;
+      // Save vehicle if make is filled
+      if (vehicleData.make) {
+        await addDoc(collection(db,'artifacts',appId,'public','data','vehicles'), {
+          ...vehicleData, clientId, clientName: clientData.name, createdAt: serverTimestamp()
+        });
+      }
+      // Auto-fill repair form with new client+vehicle
+      setRepairData(f => ({
+        ...f,
+        clientId,
+        clientName: clientData.name,
+        vehicle: vehicleData.make ? `${vehicleData.make} ${vehicleData.model} ${vehicleData.year}`.trim() : f.vehicle,
+        plate: vehicleData.plate || f.plate,
+        km: vehicleData.km || f.km,
+      }));
+      setClientSearch(clientData.name);
+      showNotif(`✓ Cliente "${clientData.name}" creado y vinculado`);
+    } catch(err) { showNotif("Error al crear cliente: " + err.message, "error"); }
+  };
+
   // Client helpers
   const getClientVehicles = id => vehicles.filter(v=>v.clientId===id);
   const selectClient = (client,target) => {
@@ -661,7 +689,8 @@ export default function App() {
     <div class="sec"><div class="sec-title">Detalle</div>
     <table><thead><tr><th>Descripción</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>
     ${(budget.partsUsed||[]).map(p=>`<tr><td>${p.name}</td><td>${p.qty}</td><td>$${Number(p.cost).toLocaleString()}</td><td>$${(p.cost*p.qty).toLocaleString()}</td></tr>`).join('')}
-    <tr class="labor"><td colspan="3">Mano de obra</td><td>$${Number(budget.laborCost||0).toLocaleString()}</td></tr>
+    ${(budget.extras||[]).filter(e=>e.desc||e.price).map(e=>`<tr><td>${e.desc||'—'}</td><td>${e.qty||1}</td><td>$${Number(e.price||0).toLocaleString()}</td><td>$${(Number(e.qty||1)*Number(e.price||0)).toLocaleString()}</td></tr>`).join('')}
+    <tr class="labor"><td colspan="3">Realización de trabajo</td><td>$${Number(budget.laborCost||0).toLocaleString()}</td></tr>
     </tbody></table></div>
     <div class="total"><span class="total-label">Total</span><span class="total-value">$${(budget.totalCost||0).toLocaleString()}</span></div>
     ${budget.notes?`<div class="notes">📝 ${budget.notes}</div>`:''}
@@ -1537,7 +1566,23 @@ export default function App() {
               <h2 style={{fontFamily:"'Outfit',sans-serif",fontWeight:900,fontSize:'26px',letterSpacing:'-1px',color:'white'}}>Vehículos</h2>
               <ViewToggle mode={listMode} setMode={setListMode} dm={dm}/>
             </div>
-            {vehicles.map(v=>(
+            {/* Search bar */}
+            <div style={{position:'relative'}}>
+              <Search style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:'#6b7280'}} size={15}/>
+              <input
+                style={{width:'100%',paddingLeft:'38px',paddingRight:'14px',paddingTop:'10px',paddingBottom:'10px',borderRadius:'12px',background:'rgba(255,255,255,0.05)',border:'1.5px solid rgba(255,255,255,0.08)',color:'white',outline:'none',fontSize:'14px',fontFamily:"'Space Grotesk',sans-serif"}}
+                placeholder="Buscar por patente, marca, modelo o cliente..."
+                value={searchTerm}
+                onChange={e=>setSearchTerm(e.target.value)}
+                onFocus={e=>e.target.style.borderColor='#f97316'}
+                onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.08)'}
+              />
+            </div>
+            {vehicles.filter(v=>{
+              if(!searchTerm) return true;
+              const q=searchTerm.toLowerCase();
+              return v.plate?.toLowerCase().includes(q)||v.make?.toLowerCase().includes(q)||v.model?.toLowerCase().includes(q)||v.clientName?.toLowerCase().includes(q)||v.year?.includes(q);
+            }).map(v=>(
               <div key={v.id} className={`card card-s p-5 flex justify-between items-start ${dm?'bg-[#161b22] card-dark':'bg-white'}`} style={{borderLeft:'3px solid #14b8a6'}}>
                 <div>
                   <p className="font-bold">🚗 {v.make} {v.model} {v.year}</p>
@@ -1551,7 +1596,7 @@ export default function App() {
                 </div>
               </div>
             ))}
-            {vehicles.length===0&&<EC icon={<Car size={36}/>} text="No hay vehículos" dm={dm}/>}
+            {vehicles.filter(v=>{if(!searchTerm)return true;const q=searchTerm.toLowerCase();return v.plate?.toLowerCase().includes(q)||v.make?.toLowerCase().includes(q)||v.model?.toLowerCase().includes(q)||v.clientName?.toLowerCase().includes(q)||v.year?.includes(q);}).length===0&&<EC icon={<Car size={36}/>} text="No hay vehículos" dm={dm}/>}
           </div>
         )}
 
@@ -1857,7 +1902,7 @@ export default function App() {
 
         {/* FORMS */}
         {(view==='add_repair'||view==='edit_repair')&&(
-          <RepForm isEdit={view==='edit_repair'} data={view==='edit_repair'?editingRepair:newRepair} setData={view==='edit_repair'?setEditingRepair:setNewRepair} onSubmit={view==='edit_repair'?updateRepair:saveRepair} onCancel={()=>{setView('repairs');setClientSearch('');setEditingRepair(null);}} clients={clients} getCV={getClientVehicles} cs={clientSearch} setCs={setClientSearch} showDD={showClientDD} setShowDD={setShowClientDD} onSC={c=>selectClient(c,view==='edit_repair'?'editRepair':'repair')} onSV={v=>selectVehicle(v,view==='edit_repair'?setEditingRepair:setNewRepair)} inventory={inventory} dm={dm} sc={startCamera}/>
+          <RepForm isEdit={view==='edit_repair'} data={view==='edit_repair'?editingRepair:newRepair} setData={view==='edit_repair'?setEditingRepair:setNewRepair} onSubmit={view==='edit_repair'?updateRepair:saveRepair} onCancel={()=>{setView('repairs');setClientSearch('');setEditingRepair(null);}} clients={clients} getCV={getClientVehicles} cs={clientSearch} setCs={setClientSearch} showDD={showClientDD} setShowDD={setShowClientDD} onSC={c=>selectClient(c,view==='edit_repair'?'editRepair':'repair')} onSV={v=>selectVehicle(v,view==='edit_repair'?setEditingRepair:setNewRepair)} inventory={inventory} dm={dm} sc={startCamera} onCreateClientAndVehicle={createClientAndVehicle}/>
         )}
         {(view==='add_budget'||view==='edit_budget')&&(
           <BudForm isEdit={view==='edit_budget'} data={view==='edit_budget'?editingBudget:newBudget} setData={view==='edit_budget'?setEditingBudget:setNewBudget} onSubmit={view==='edit_budget'?updateBudget:saveBudget} onCancel={()=>{setView('budgets');setClientSearchB('');setEditingBudget(null);}} clients={clients} getCV={getClientVehicles} cs={clientSearchB} setCs={setClientSearchB} showDD={showClientDDB} setShowDD={setShowClientDDB} onSC={c=>selectClient(c,view==='edit_budget'?'editBudget':'budget')} onSV={v=>selectVehicle(v,view==='edit_budget'?setEditingBudget:setNewBudget)} inventory={inventory} dm={dm} empresas={tallerConfig.empresas||[]} prefilled={view==='add_budget'&&!!newBudget.vehicle}/>
@@ -2011,16 +2056,91 @@ function PSel({inventory,parts,onChange,dm}){
   </div>;
 }
 
-function TBox({parts,laborCost,color='green'}){
-  const t=(parts||[]).reduce((s,p)=>s+(p.cost*p.qty),0)+Number(laborCost||0);
+function BudCalc({extras,onChange,dm}){
+  const rows=extras||[];
+  const addRow=()=>onChange([...rows,{desc:'',qty:1,price:''}]);
+  const upd=(idx,field,val)=>{const r=[...rows];r[idx]={...r[idx],[field]:val};onChange(r);};
+  const del=idx=>onChange(rows.filter((_,i)=>i!==idx));
+  const total=rows.reduce((s,r)=>s+(Number(r.qty||1)*Number(r.price||0)),0);
+  return<div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'8px'}}>
+      <span className="lbl" style={{margin:0}}>Detalle adicional (calculadora)</span>
+      <button type="button" onClick={addRow} style={{fontSize:'11px',fontWeight:700,color:'#f97316',background:'rgba(249,115,22,0.1)',border:'none',cursor:'pointer',padding:'4px 10px',borderRadius:'8px',display:'flex',alignItems:'center',gap:'4px'}}><Plus size={12}/>Agregar línea</button>
+    </div>
+    {rows.length>0&&(
+      <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'14px',overflow:'hidden'}}>
+        {/* Header */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 60px 90px 32px',gap:'4px',padding:'8px 10px',background:'rgba(255,255,255,0.05)',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+          <span style={{fontSize:'10px',fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'1px'}}>Descripción</span>
+          <span style={{fontSize:'10px',fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'1px',textAlign:'center'}}>Cant.</span>
+          <span style={{fontSize:'10px',fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'1px',textAlign:'right'}}>Precio</span>
+          <span/>
+        </div>
+        {rows.map((r,i)=>(
+          <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 60px 90px 32px',gap:'4px',padding:'6px 10px',borderBottom:'1px solid rgba(255,255,255,0.04)',alignItems:'center'}}>
+            <input value={r.desc||''} onChange={e=>upd(i,'desc',e.target.value)} placeholder="Ítem..." style={{background:'transparent',border:'none',outline:'none',color:'white',fontSize:'13px',fontFamily:"'Space Grotesk',sans-serif",width:'100%'}}/>
+            <input type="number" min="1" value={r.qty||1} onChange={e=>upd(i,'qty',e.target.value)} style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'8px',color:'white',fontSize:'13px',textAlign:'center',padding:'4px',fontFamily:"'Space Grotesk',sans-serif",width:'100%',outline:'none'}}/>
+            <input type="number" min="0" value={r.price||''} onChange={e=>upd(i,'price',e.target.value)} placeholder="0" style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'8px',color:'#10b981',fontSize:'13px',textAlign:'right',padding:'4px 6px',fontFamily:"'Space Grotesk',sans-serif",width:'100%',outline:'none'}}/>
+            <button type="button" onClick={()=>del(i)} style={{background:'none',border:'none',cursor:'pointer',color:'#ef4444',display:'flex',justifyContent:'center'}}><X size={13}/></button>
+          </div>
+        ))}
+        {/* Subtotal row */}
+        <div style={{display:'flex',justifyContent:'space-between',padding:'8px 12px',background:'rgba(59,130,246,0.08)',borderTop:'1px solid rgba(59,130,246,0.15)'}}>
+          <span style={{fontSize:'12px',fontWeight:700,color:'#6b7280'}}>Subtotal calculadora</span>
+          <span style={{fontSize:'13px',fontWeight:900,color:'#3b82f6',fontFamily:"'Outfit',sans-serif"}}>${total.toLocaleString()}</span>
+        </div>
+      </div>
+    )}
+    {rows.length===0&&<p style={{fontSize:'12px',color:'#4b5563',textAlign:'center',padding:'10px 0'}}>Agregá líneas para detallar ítems adicionales</p>}
+  </div>;
+}
+
+function TBox({parts,laborCost,extras,color='green'}){
+  const partsTotal=(parts||[]).reduce((s,p)=>s+(p.cost*p.qty),0);
+  const extrasTotal=(extras||[]).reduce((s,e)=>s+(Number(e.qty||1)*Number(e.price||0)),0);
+  const t=partsTotal+Number(laborCost||0)+extrasTotal;
   if(t<=0) return null;
   return<div className="rounded-2xl p-4 text-sm font-bold" style={{background:color==='green'?'rgba(16,185,129,0.12)':'rgba(59,130,246,0.12)',border:`1px solid ${color==='green'?'rgba(16,185,129,0.25)':'rgba(59,130,246,0.25)'}`,color:color==='green'?'#10b981':'#3b82f6'}}>💰 Total: ${t.toLocaleString()}</div>;
 }
 
-function RepForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,showDD,setShowDD,onSC,onSV,inventory,dm,sc}){
+function RepForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,showDD,setShowDD,onSC,onSV,inventory,dm,sc,onCreateClientAndVehicle}){
+  const [showNewClient,setShowNewClient]=useState(false);
+  const [newCl,setNewCl]=useState({name:'',phone:'',email:''});
+  const [newVeh,setNewVeh]=useState({make:'',model:'',year:'',plate:'',km:''});
+  const handleCreateInline=async()=>{
+    if(!newCl.name.trim()){return;}
+    await onCreateClientAndVehicle(newCl,newVeh,setData);
+    setShowNewClient(false);setNewCl({name:'',phone:'',email:''});setNewVeh({make:'',model:'',year:'',plate:'',km:''});
+    setCs(newCl.name);
+  };
   if(!data) return null;
   return<FCard onSubmit={onSubmit} title={isEdit?'Editar Servicio':'Nuevo Servicio'} onCancel={onCancel} dm={dm}>
-    <CDrop cs={cs} setCs={setCs} showDD={showDD} setShowDD={setShowDD} clients={clients} onSC={onSC} dm={dm}/>
+    {/* Client search + inline creation */}
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'5px'}}>
+        <span className="lbl" style={{margin:0}}>Cliente</span>
+        {!isEdit&&<button type="button" onClick={()=>setShowNewClient(!showNewClient)} style={{fontSize:'11px',fontWeight:700,color:showNewClient?'#f97316':'#6b7280',background:showNewClient?'rgba(249,115,22,0.1)':'transparent',border:'none',cursor:'pointer',padding:'4px 8px',borderRadius:'8px',display:'flex',alignItems:'center',gap:'4px'}}><Plus size={12}/>{showNewClient?'Cancelar':'Nuevo cliente'}</button>}
+      </div>
+      <CDrop cs={cs} setCs={setCs} showDD={showDD} setShowDD={setShowDD} clients={clients} onSC={onSC} dm={dm}/>
+      {showNewClient&&(
+        <div style={{marginTop:'10px',background:'rgba(249,115,22,0.06)',border:'1.5px solid rgba(249,115,22,0.2)',borderRadius:'16px',padding:'14px',display:'flex',flexDirection:'column',gap:'10px'}}>
+          <p style={{fontSize:'12px',fontWeight:700,color:'#f97316',margin:0}}>👤 Nuevo cliente</p>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+            <FInp label="Nombre *" placeholder="Juan García" value={newCl.name} onChange={e=>setNewCl(c=>({...c,name:e.target.value}))} dm={dm}/>
+            <FInp label="Teléfono" placeholder="11-xxxx-xxxx" value={newCl.phone} onChange={e=>setNewCl(c=>({...c,phone:e.target.value}))} dm={dm}/>
+          </div>
+          <p style={{fontSize:'12px',fontWeight:700,color:'#14b8a6',margin:0}}>🚗 Vehículo (opcional)</p>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+            <FInp label="Marca" placeholder="Toyota" value={newVeh.make} onChange={e=>setNewVeh(v=>({...v,make:e.target.value}))} dm={dm}/>
+            <FInp label="Modelo" placeholder="Corolla" value={newVeh.model} onChange={e=>setNewVeh(v=>({...v,model:e.target.value}))} dm={dm}/>
+            <FInp label="Año" placeholder="2018" value={newVeh.year} onChange={e=>setNewVeh(v=>({...v,year:e.target.value}))} dm={dm}/>
+            <FInp label="Patente" placeholder="ABC123" value={newVeh.plate} onChange={e=>setNewVeh(v=>({...v,plate:e.target.value.toUpperCase()}))} dm={dm}/>
+            <FInp label="Km" placeholder="75000" type="number" value={newVeh.km} onChange={e=>setNewVeh(v=>({...v,km:e.target.value}))} dm={dm}/>
+          </div>
+          <button type="button" onClick={handleCreateInline} style={{background:'linear-gradient(135deg,#f97316,#ea580c)',color:'white',border:'none',borderRadius:'12px',padding:'10px 16px',fontWeight:700,fontSize:'13px',cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',justifyContent:'center'}}><Check size={14}/>Crear y vincular</button>
+        </div>
+      )}
+    </div>
     <VDrop clientId={data.clientId} plate={data.plate} onSV={onSV} getCV={getCV} dm={dm}/>
     <div className="grid grid-cols-2 gap-3">
       <FInp label="Vehículo *" required placeholder="Toyota Corolla" value={data.vehicle||''} onChange={e=>setData(f=>({...f,vehicle:e.target.value}))} dm={dm}/>
@@ -2064,8 +2184,10 @@ function BudForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,s
     </div>
     <FTA label="Descripción" placeholder="Trabajo a realizar..." value={data.description||''} onChange={e=>setData(f=>({...f,description:e.target.value}))} dm={dm}/>
     <PSel inventory={inventory} parts={data.partsUsed||[]} onChange={p=>setData(f=>({...f,partsUsed:p}))} dm={dm}/>
+    {/* Excel-style calculator for extra line items */}
+    <BudCalc extras={data.extras||[]} onChange={extras=>setData(f=>({...f,extras}))} dm={dm}/>
     <FTA label="Notas" placeholder="Condiciones, garantía..." value={data.notes||''} onChange={e=>setData(f=>({...f,notes:e.target.value}))} dm={dm}/>
-    <TBox parts={data.partsUsed} laborCost={data.laborCost} color="blue"/>
+    <TBox parts={data.partsUsed} laborCost={data.laborCost} extras={data.extras} color="blue"/>
     <FBtn>{isEdit?'Guardar cambios':'Guardar Presupuesto'}</FBtn>
   </FCard>;
 }

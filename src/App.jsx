@@ -681,64 +681,138 @@ export default function App() {
   const printBudget = budget => {
     const empresa = (tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId) || tallerConfig.empresas?.[0] || {nombre:tallerConfig.nombre,cuit:'',direccion:tallerConfig.direccion,telefono:tallerConfig.telefono,email:tallerConfig.email};
     const dateStr=budget.date?new Date(budget.date+'T12:00:00').toLocaleDateString('es-AR'):new Date().toLocaleDateString('es-AR');
-    const win=window.open('','_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Presupuesto</title>
-    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#1e293b;max-width:820px;margin:0 auto}
-    .header{display:flex;justify-content:space-between;padding-bottom:24px;margin-bottom:28px;border-bottom:3px solid #0f172a}
-    h1{font-size:26px;font-weight:900;color:#0f172a}.sub{font-size:12px;color:#64748b;margin-top:5px;line-height:1.7}.cuit{font-size:11px;color:#94a3b8;margin-top:3px}
-    .doc-title{font-size:20px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:2px;text-align:right}.date{font-size:12px;color:#94a3b8;text-align:right;margin-top:4px}
-    .sec{margin:18px 0}.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #f1f5f9}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.item label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px}.item span{font-size:14px;font-weight:700}
-    table{width:100%;border-collapse:collapse}thead tr{background:#0f172a}th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:white;text-transform:uppercase}
-    td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f1f5f9}tr:nth-child(even) td{background:#f8fafc}.labor td{background:#f1f5f9;font-weight:700}
-    .total{background:#0f172a;color:white;padding:18px 22px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;margin-top:20px}
-    .total-label{font-size:12px;opacity:0.6;text-transform:uppercase;letter-spacing:1px}.total-value{font-size:26px;font-weight:900}
-    .notes{background:#fffbeb;border:1px solid #fde68a;padding:14px;border-radius:10px;font-size:13px;color:#92400e;margin-top:14px}
-    .footer{margin-top:30px;padding-top:16px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}
-    .footer p{font-size:11px;color:#94a3b8}.validity{background:#f0fdf4;color:#166534;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700}
+    const partsCost = (budget.partsUsed||[]).reduce((s,p)=>s+(Number(p.cost)*Number(p.qty)),0);
+    const laborCost = Number(budget.laborCost||0);
+    const totalCost = budget.totalCost || (partsCost + laborCost);
+    const extras = budget.extras||[];
+    const extrasCost = extras.reduce((s,e)=>s+(Number(e.price||0)*Number(e.qty||1)),0);
+    const grandTotal = totalCost + extrasCost;
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Presupuesto${budget.budgetNumber?' #'+budget.budgetNumber:''}</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#1e293b;max-width:820px;margin:0 auto;font-size:14px}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:24px;margin-bottom:28px;border-bottom:3px solid #0f172a}
+      h1{font-size:26px;font-weight:900;color:#0f172a}
+      .sub{font-size:12px;color:#64748b;margin-top:5px;line-height:1.7}
+      .cuit{font-size:11px;color:#94a3b8;margin-top:3px}
+      .doc-title{font-size:20px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:2px;text-align:right}
+      .date{font-size:12px;color:#94a3b8;text-align:right;margin-top:4px}
+      .sec{margin:18px 0}
+      .sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #f1f5f9}
+      .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+      .item label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px}
+      .item span{font-size:14px;font-weight:700}
+      table{width:100%;border-collapse:collapse;margin-top:4px}
+      thead tr{background:#0f172a}
+      th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:white;text-transform:uppercase}
+      td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f1f5f9}
+      tr:nth-child(even) td{background:#f8fafc}
+      .labor td{background:#f1f5f9;font-weight:700}
+      .totals-box{background:#f8fafc;border-radius:12px;padding:16px 20px;margin-top:20px;border:1px solid #e2e8f0}
+      .tot-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;color:#475569}
+      .tot-row.main{font-size:18px;font-weight:900;color:#0f172a;border-top:2px solid #0f172a;margin-top:8px;padding-top:10px}
+      .total-block{background:#0f172a;color:white;padding:18px 22px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+      .total-label{font-size:12px;opacity:0.6;text-transform:uppercase;letter-spacing:1px}
+      .total-value{font-size:28px;font-weight:900}
+      .notes{background:#fffbeb;border:1px solid #fde68a;padding:14px;border-radius:10px;font-size:13px;color:#92400e;margin-top:14px;line-height:1.6}
+      .footer{margin-top:36px;padding-top:18px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}
+      .footer p{font-size:11px;color:#94a3b8}
+      .validity{background:#f0fdf4;color:#166534;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700}
+      .firma-section{display:flex;gap:40px;margin-top:48px}
+      .firma-box{flex:1;border-top:1.5px solid #cbd5e1;padding-top:10px;text-align:center;font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+      @media print{body{padding:20px}@page{margin:15mm}}
+      .logo-img{max-height:72px;max-width:180px;object-fit:contain}
     </style></head><body>
     <div class="header">
-      <div><h1>${empresa.nombre}</h1><p class="sub">${empresa.direccion}<br>${empresa.telefono} · ${empresa.email}</p>${empresa.cuit?`<p class="cuit">CUIT: ${empresa.cuit}</p>`:''}</div>
-      <div><div class="doc-title">Presupuesto${budget.budgetNumber?` #${budget.budgetNumber}`:''}</div><div class="date">Fecha: ${dateStr}</div></div>
+      <div style="display:flex;align-items:center;gap:16px">
+        ${empresa.showLogo&&empresa.logoUrl?`<img src="${empresa.logoUrl}" class="logo-img" alt="logo" style="max-height:64px;max-width:160px;object-fit:contain"/>`:'' }
+        <div>
+          <h1>${empresa.nombre}</h1>
+          <p class="sub">${empresa.direccion||''}<br>${empresa.telefono||''} · ${empresa.email||''}</p>
+          ${empresa.cuit?`<p class="cuit">CUIT: ${empresa.cuit}</p>`:''}
+        </div>
+      </div>
+      <div>
+        <div class="doc-title">Presupuesto${budget.budgetNumber?` #${budget.budgetNumber}`:''}</div>
+        <div class="date">Fecha: ${dateStr}</div>
+      </div>
     </div>
-    <div class="sec"><div class="sec-title">Cliente</div><div class="grid">
-    <div class="item"><label>Nombre</label><span>${budget.clientName}</span></div>
-    <div class="item"><label>Teléfono</label><span>${budget.clientPhone||'—'}</span></div></div></div>
-    <div class="sec"><div class="sec-title">Vehículo</div><div class="grid">
-    <div class="item"><label>Vehículo</label><span>${budget.vehicle}</span></div>
-    <div class="item"><label>Patente</label><span>${budget.plate||'—'}</span></div>
-    ${budget.km?`<div class="item"><label>Km</label><span>${Number(budget.km).toLocaleString()} km</span></div>`:''}
-    </div></div>
-    ${budget.description?`<div class="sec"><div class="sec-title">Trabajo</div><p style="font-size:14px;line-height:1.7">${budget.description}</p></div>`:''}
-    ${budget.showDetail!==false?`${budget.partsUsed?.length>0?`<div class="sec"><div class="sec-title">Detalle</div>
-    <table><thead><tr><th>Descripción</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>
-    ${(budget.partsUsed||[]).map(p=>`<tr><td>${p.name}</td><td>${p.qty}</td><td>$${Number(p.cost).toLocaleString()}</td><td>$${(p.cost*p.qty).toLocaleString()}</td></tr>`).join('')}
-    <tr class="labor"><td colspan="3">Mano de obra</td><td>$${Number(budget.laborCost||0).toLocaleString()}</td></tr>
-    </tbody></table></div>`:''}`:''}
-    <div class="sec"><div class="sec-title">Trabajo a realizar</div>
-      <p style="font-size:14px;line-height:1.8;margin-top:6px">${repair.description||'—'}</p>
+
+    <div class="sec">
+      <div class="sec-title">Cliente</div>
+      <div class="info-grid">
+        <div class="item"><label>Nombre</label><span>${budget.clientName||'—'}</span></div>
+        <div class="item"><label>Teléfono</label><span>${budget.clientPhone||'—'}</span></div>
+      </div>
     </div>
-    ${repair.partsUsed?.length?`<div class="sec"><div class="sec-title">Repuestos utilizados</div>
-    <table><thead><tr><th>Repuesto</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>
-    ${repair.partsUsed.map(p=>`<tr><td>${p.name}</td><td>${p.qty}</td><td>$${Number(p.cost).toLocaleString()}</td><td>$${(p.cost*p.qty).toLocaleString()}</td></tr>`).join('')}
-    </tbody></table></div>`:''}
-    <div class="totals">
-      ${repair.laborCost>0?`<div class="tot-row"><span>Mano de obra</span><span>$${Number(repair.laborCost||0).toLocaleString()}</span></div>`:''}
-      ${(repair.partsCost||0)>0?`<div class="tot-row"><span>Repuestos</span><span>$${Number(repair.partsCost||0).toLocaleString()}</span></div>`:''}
-      <div class="tot-row main"><span>TOTAL</span><span>$${Number(repair.totalCost||0).toLocaleString()}</span></div>
-      ${paid>0?`<div class="tot-row" style="background:#f0fdf4;color:#16a34a"><span>Pagado</span><span>$${paid.toLocaleString()}</span></div>`:''}
-      ${debe>0?`<div class="tot-row debe"><span>Saldo pendiente</span><span>$${debe.toLocaleString()}</span></div>`:''}
+
+    <div class="sec">
+      <div class="sec-title">Vehículo</div>
+      <div class="info-grid">
+        <div class="item"><label>Vehículo</label><span>${budget.vehicle||'—'}</span></div>
+        <div class="item"><label>Patente</label><span>${budget.plate||'—'}</span></div>
+        ${budget.km?`<div class="item"><label>Kilometraje</label><span>${Number(budget.km).toLocaleString()} km</span></div>`:''}
+      </div>
     </div>
-    ${repair.notes?`<div class="notas">📝 ${repair.notes}</div>`:''}
-    <div class="firma">
+
+    ${budget.description?`<div class="sec"><div class="sec-title">Trabajo a realizar</div><p style="font-size:14px;line-height:1.8;margin-top:6px;color:#334155">${budget.description}</p></div>`:''}
+
+    ${budget.showDetail!==false&&((budget.partsUsed||[]).length>0||laborCost>0||extras.length>0)?`
+    <div class="sec">
+      <div class="sec-title">Detalle de presupuesto</div>
+      <table>
+        <thead><tr><th>Descripción</th><th style="text-align:center">Cant.</th><th style="text-align:right">Precio unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
+        <tbody>
+          ${(budget.partsUsed||[]).map(p=>`<tr><td>${p.name}</td><td style="text-align:center">${p.qty}</td><td style="text-align:right">$${Number(p.cost).toLocaleString()}</td><td style="text-align:right">$${(Number(p.cost)*Number(p.qty)).toLocaleString()}</td></tr>`).join('')}
+          ${extras.map(e=>`<tr><td>${e.desc||'Extra'}</td><td style="text-align:center">${e.qty||1}</td><td style="text-align:right">$${Number(e.price||0).toLocaleString()}</td><td style="text-align:right">$${(Number(e.price||0)*Number(e.qty||1)).toLocaleString()}</td></tr>`).join('')}
+          ${laborCost>0?`<tr class="labor"><td colspan="3"><strong>Mano de obra</strong></td><td style="text-align:right"><strong>$${laborCost.toLocaleString()}</strong></td></tr>`:''}
+        </tbody>
+      </table>
+    </div>`:''}
+
+    <div class="total-block">
+      <span class="total-label">Total del presupuesto</span>
+      <span class="total-value">$${grandTotal.toLocaleString()}</span>
+    </div>
+
+    ${budget.notes?`<div class="notes">📝 <strong>Notas:</strong> ${budget.notes}</div>`:''}
+
+    <div class="firma-section">
       <div class="firma-box">Firma del cliente</div>
-      <div class="firma-box">Firma del mecánico</div>
+      <div class="firma-box">Autorización</div>
     </div>
-    </body></html>`);
-    win.document.close();
-    win.focus();
-    win.print();
-    win.onafterprint = () => { win.close(); };
+
+    <div class="footer">
+      <p>${empresa.nombre} · ${empresa.telefono||''} · ${empresa.email||''}</p>
+      <span class="validity">Válido por 15 días</span>
+    </div>
+
+    <script>window.onload=function(){setTimeout(function(){window.print();},400);}</script>
+    </body></html>`;
+    // Usar blob + iframe para evitar bloqueo de popups en móvil/Safari
+    const blob = new Blob([htmlContent], {type: 'text/html;charset=utf-8'});
+    const blobUrl = URL.createObjectURL(blob);
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;opacity:0;pointer-events:none';
+    document.body.appendChild(iframe);
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch(err) {
+        // Fallback Safari: abrir en nueva pestaña
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.click();
+      }
+      setTimeout(() => {
+        try { document.body.removeChild(iframe); } catch{}
+        URL.revokeObjectURL(blobUrl);
+      }, 3000);
+    };
+    iframe.src = blobUrl;
   };
 
   const printQRLabel = product => {
@@ -1115,7 +1189,7 @@ export default function App() {
         </div>
       )}
 
-      <main style={{padding:'16px',paddingLeft:'max(16px,env(safe-area-inset-left))',paddingRight:'max(16px,env(safe-area-inset-right))',maxWidth:'640px',margin:'0 auto',paddingTop: view==='dashboard'?'16px':'72px',paddingBottom:'calc(160px + env(safe-area-inset-bottom))'}}>
+      <main style={{padding:'16px',paddingLeft:'max(16px,env(safe-area-inset-left))',paddingRight:'max(16px,env(safe-area-inset-right))',maxWidth:'640px',margin:'0 auto',paddingTop: view==='dashboard'?'max(16px,env(safe-area-inset-top))':'calc(env(safe-area-inset-top) + 72px)',paddingBottom:'calc(160px + env(safe-area-inset-bottom))'}}>
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(
@@ -1837,12 +1911,19 @@ export default function App() {
             <div className={`card card-s p-6 space-y-4 ${dm?'bg-[#161b22] card-dark':'bg-white'}`}>
               <p className={`font-bold text-sm flex items-center gap-2 ${dm?'text-white':'text-slate-800'}`}><Building2 size={15} className="text-blue-500"/>Empresas de facturación</p>
               {(tallerConfig.empresas||[]).map((emp,i)=>(
-                <div key={emp.id} className={`rounded-2xl p-4 border ${dm?'bg-[#0d1117] border-[#30363d]':'bg-slate-50 border-slate-200'}`}>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className={`font-bold ${dm?'text-white':'text-slate-900'}`}>{emp.nombre}</p>
-                      {emp.cuit&&<p className={`text-xs ${dm?'text-slate-400':'text-slate-500'}`}>CUIT: {emp.cuit}</p>}
-                      <p className={`text-xs ${dm?'text-slate-500':'text-slate-400'}`}>{emp.telefono} · {emp.email}</p>
+      <div key={emp.id} className={`rounded-2xl p-4 border ${dm?'bg-[#0d1117] border-[#30363d]':'bg-slate-50 border-slate-200'}`}>
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {emp.logoUrl
+                        ?<img src={emp.logoUrl} alt="logo" style={{width:'44px',height:'44px',objectFit:'contain',borderRadius:'10px',background:'white',padding:'4px',flexShrink:0}}/>
+                        :<div style={{width:'44px',height:'44px',borderRadius:'10px',background:'rgba(59,130,246,0.1)',border:'1.5px dashed rgba(59,130,246,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Building2 size={18} color="#3b82f6"/></div>
+                      }
+                      <div className="min-w-0">
+                        <p className={`font-bold truncate ${dm?'text-white':'text-slate-900'}`}>{emp.nombre}</p>
+                        {emp.cuit&&<p className={`text-xs ${dm?'text-slate-400':'text-slate-500'}`}>CUIT: {emp.cuit}</p>}
+                        <p className={`text-xs truncate ${dm?'text-slate-500':'text-slate-400'}`}>{emp.telefono} · {emp.email}</p>
+                        {emp.showLogo&&emp.logoUrl&&<span style={{fontSize:'10px',fontWeight:700,color:'#10b981',display:'flex',alignItems:'center',gap:'3px',marginTop:'2px'}}><Check size={10}/>Logo en presupuestos</span>}
+                      </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
                       <button onClick={()=>{
@@ -1872,6 +1953,30 @@ export default function App() {
                       onChange={e=>setEditConfig(c=>({...c,empresas:(c.empresas||[]).map(emp=>emp._editing?{...emp,[f]:e.target.value}:emp)}))}/>
                     </div>
                   ))}
+                  {/* Logo URL */}
+                  <div>
+                    <span className="lbl">Logo (URL de imagen)</span>
+                    <input className={`inp ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`}
+                      placeholder="https://... o pegar URL de imagen"
+                      value={(editConfig.empresas||[]).find(e=>e._editing)?.logoUrl||''}
+                      onChange={e=>setEditConfig(c=>({...c,empresas:(c.empresas||[]).map(emp=>emp._editing?{...emp,logoUrl:e.target.value}:emp)}))}/>
+                    {(editConfig.empresas||[]).find(e=>e._editing)?.logoUrl&&(
+                      <div className="mt-2 flex items-center gap-3">
+                        <img src={(editConfig.empresas||[]).find(e=>e._editing).logoUrl} alt="preview" style={{height:'48px',maxWidth:'120px',objectFit:'contain',borderRadius:'8px',background:'white',padding:'4px',border:'1px solid rgba(255,255,255,0.1)'}} onError={e=>e.target.style.display='none'}/>
+                        <button type="button" onClick={()=>setEditConfig(c=>({...c,empresas:(c.empresas||[]).map(emp=>emp._editing?{...emp,logoUrl:''}:emp)}))} className="text-xs text-red-400 flex items-center gap-1"><X size={12}/>Quitar logo</button>
+                      </div>
+                    )}
+                  </div>
+                  {/* Mostrar logo en presupuesto toggle */}
+                  <div onClick={()=>setEditConfig(c=>({...c,empresas:(c.empresas||[]).map(emp=>emp._editing?{...emp,showLogo:!emp.showLogo}:emp)}))} style={{display:'flex',alignItems:'center',gap:'12px',cursor:'pointer',padding:'12px 14px',borderRadius:'14px',background:(editConfig.empresas||[]).find(e=>e._editing)?.showLogo?'rgba(16,185,129,0.06)':'rgba(255,255,255,0.03)',border:`1.5px solid ${(editConfig.empresas||[]).find(e=>e._editing)?.showLogo?'rgba(16,185,129,0.2)':'rgba(255,255,255,0.08)'}`,transition:'all 0.2s',userSelect:'none'}}>
+                    <div style={{width:'20px',height:'20px',borderRadius:'6px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:(editConfig.empresas||[]).find(e=>e._editing)?.showLogo?'linear-gradient(135deg,#10b981,#059669)':'rgba(255,255,255,0.07)',transition:'all 0.2s'}}>
+                      {(editConfig.empresas||[]).find(e=>e._editing)?.showLogo&&<Check size={12} color="white"/>}
+                    </div>
+                    <div>
+                      <p style={{fontSize:'13px',fontWeight:700,color:'white',margin:0}}>Mostrar logo en presupuestos</p>
+                      <p style={{fontSize:'11px',color:'#6b7280',margin:0,marginTop:'2px'}}>El logo aparecerá en el PDF impreso</p>
+                    </div>
+                  </div>
                   <div className="flex gap-3">
                     <button onClick={()=>setEditConfig(null)} className={`btn-ghost flex-1 ${dm?'border-[#30363d] text-slate-300':'border-slate-200 text-slate-600'}`}>Cancelar</button>
                     <button onClick={()=>{
@@ -2020,9 +2125,9 @@ export default function App() {
 
         {/* QR SCAN */}
         {view==='scan'&&(
-          <div className="fixed inset-0 z-[100] flex flex-col" style={{background:'#000',position:'fixed'}}>
+          <div style={{position:"fixed",inset:0,zIndex:100,display:"flex",flexDirection:"column",background:"#000"}}>
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-12 pb-4">
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",paddingTop:"calc(env(safe-area-inset-top) + 16px)"}}>  
               <button onClick={()=>{setView('dashboard');setFlashOn(false);setZoomLevel(1);}} className="p-3 rounded-full" style={{background:'rgba(255,255,255,0.1)'}}><X size={22} className="text-white"/></button>
               <p className="text-white font-bold text-sm">Escáner</p>
               <button onClick={async()=>{
@@ -2050,7 +2155,7 @@ export default function App() {
               </div>
             </div>
             {/* Controls */}
-            <div style={{position:'absolute',bottom:'110px',left:0,right:0,paddingLeft:'32px',paddingRight:'32px',display:'flex',flexDirection:'column',gap:'10px'}}>
+            <div style={{padding:"16px 24px",paddingBottom:"calc(env(safe-area-inset-bottom) + 96px)",flexShrink:0,display:"flex",flexDirection:"column",gap:"10px"}}>
               <p style={{color:'rgba(255,255,255,0.4)',textAlign:'center',fontSize:'11px'}}>Apuntá al código QR o código de barras</p>
               <div style={{display:'flex',alignItems:'center',gap:'12px',background:'rgba(0,0,0,0.5)',borderRadius:'16px',padding:'10px 16px',backdropFilter:'blur(10px)'}}>
                 <span style={{color:'white',fontSize:'11px',fontWeight:700,width:'28px',textAlign:'center'}}>1x</span>
@@ -2067,8 +2172,8 @@ export default function App() {
 
         {/* CAMERA */}
         {view==='camera'&&(
-          <div className="fixed inset-0 z-[100] flex flex-col" style={{background:'#000',position:'fixed'}}>
-            <div className="flex items-center justify-between p-5 absolute top-0 left-0 right-0 z-10">
+          <div style={{position:"fixed",inset:0,zIndex:100,display:"flex",flexDirection:"column",background:"#000"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",paddingTop:"calc(env(safe-area-inset-top) + 16px)",position:"absolute",top:0,left:0,right:0,zIndex:10,background:"rgba(0,0,0,0.3)"}}>
               <button onClick={()=>{setView(({product:'add',editProduct:'edit_product',repair:'add_repair',editRepair:'edit_repair'})[cameraTarget]||'dashboard');setCapturedPhoto(null);}} className="p-3 rounded-full" style={{background:'rgba(0,0,0,0.5)'}}><X size={22} className="text-white"/></button>
               <p className="text-white font-bold text-sm">{capturedPhoto?'Revisar':'Tomar foto'}</p>
               {capturedPhoto?<button onClick={()=>setCapturedPhoto(null)} className="p-3 rounded-full" style={{background:'rgba(0,0,0,0.5)'}}><RefreshCw size={18} className="text-white"/></button>:<div style={{width:48}}/>}
@@ -2078,7 +2183,7 @@ export default function App() {
               {capturedPhoto&&<img src={capturedPhoto} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'contain'}} alt=""/>}
               {!capturedPhoto&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}><div style={{width:'220px',height:'220px',borderRadius:'24px',border:'2px solid rgba(255,255,255,0.3)'}}/></div>}
             </div>
-            <div className="p-8 flex items-center justify-center gap-8" style={{background:'rgba(0,0,0,0.7)'}}>
+            <div style={{padding:"24px",paddingBottom:"calc(env(safe-area-inset-bottom) + 24px)",display:"flex",alignItems:"center",justifyContent:"center",gap:"32px",background:"rgba(0,0,0,0.7)",flexShrink:0}}>
               {!capturedPhoto?(
                 <button onClick={capturePhoto} className="shutter-btn" disabled={!cameraReady}><div className="shutter-inner"/></button>
               ):(

@@ -54,7 +54,7 @@ const DEFAULT_CONFIG = {
 const DEFAULT_USERS = [{ id:'1', name:'Francisco', username:'francisco', password:'taller123', role:'admin', color:'#f97316' }];
 
 const EMPTY_REPAIR = { vehicle:'', plate:'', km:'', clientId:'', clientName:'', description:'', partsUsed:[], laborCost:0, status:'pendiente', paymentStatus:'debe', imageUrl:'', notes:'', orderNumber:'', payments:[] };
-const EMPTY_BUDGET = { clientId:'', clientName:'', clientPhone:'', vehicle:'', plate:'', km:'', description:'', partsUsed:[], laborCost:0, notes:'', date:new Date().toISOString().split('T')[0], empresaId:'1', budgetNumber:'' };
+const EMPTY_BUDGET = { clientId:'', clientName:'', clientPhone:'', vehicle:'', plate:'', km:'', description:'', partsUsed:[], laborCost:0, notes:'', date:new Date().toISOString().split('T')[0], empresaId:'1', budgetNumber:'', showDetail:true };
 const EMPTY_CLIENT = { name:'', phone:'', email:'', vehicles:[] };
 const EMPTY_VEHICLE = { make:'', model:'', year:'', plate:'', km:'', clientId:'', clientName:'' };
 const EMPTY_PRODUCT = { name:'', sku:'', barcode:'', location:'', quantity:0, minStock:1, cost:0, salePrice:0, imageUrl:'', description:'', supplier:'', supplierPhone:'', categoryId:'' };
@@ -159,6 +159,9 @@ export default function App() {
   const [flashOn, setFlashOn] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const qrInstanceRef = useRef(null);
+  const [expandedRepair, setExpandedRepair] = useState(null);
+  const [swipedRepair, setSwipedRepair] = useState(null);
+  const swipeRef = useRef({});
   const [qrAction, setQrAction] = useState(null);
   const [selectedRepairForQR, setSelectedRepairForQR] = useState('');
   const [qrQty, setQrQty] = useState(1);
@@ -205,7 +208,14 @@ export default function App() {
     } catch {}
   }, []);
 
-  useEffect(() => { document.documentElement.classList.add('dark'); }, []);
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+    // Fix viewport for iPhone - prevent zoom and ensure proper scaling
+    const vp = document.querySelector('meta[name=viewport]');
+    if(vp) vp.setAttribute('content','width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover');
+    // Prevent double-tap zoom
+    document.documentElement.style.touchAction='manipulation';
+  }, []);
   useEffect(() => { signInAnonymously(auth).catch(console.error); return onAuthStateChanged(auth, u=>{setUser(u);setLoading(false);}); }, []);
 
   useEffect(() => {
@@ -623,6 +633,20 @@ export default function App() {
     showNotif("✓ Agregado al servicio"); setShowQRModal(false);
   };
 
+  // Add vehicle to existing client inline
+  const addVehicleToClient = async (clientId, clientName, vehicleData, setNewV) => {
+    if (!clientId || !vehicleData.make.trim()) return;
+    const vRef = await addDoc(collection(db,'artifacts',appId,'public','data','vehicles'), {
+      ...vehicleData,
+      clientId, clientName,
+      km: vehicleData.km||'',
+      createdAt: serverTimestamp()
+    });
+    setNewV({make:'',model:'',year:'',plate:'',km:''});
+    showNotif('✓ Vehículo agregado');
+    return { id: vRef.id, ...vehicleData, clientId, clientName };
+  };
+
   // WhatsApp — FIX: proper international format
   const sendWhatsApp = budget => {
     const rawPhone = budget.clientPhone||'';
@@ -686,54 +710,11 @@ export default function App() {
     ${budget.km?`<div class="item"><label>Km</label><span>${Number(budget.km).toLocaleString()} km</span></div>`:''}
     </div></div>
     ${budget.description?`<div class="sec"><div class="sec-title">Trabajo</div><p style="font-size:14px;line-height:1.7">${budget.description}</p></div>`:''}
-    <div class="sec"><div class="sec-title">Detalle</div>
+    ${budget.showDetail!==false?`${budget.partsUsed?.length>0?`<div class="sec"><div class="sec-title">Detalle</div>
     <table><thead><tr><th>Descripción</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>
     ${(budget.partsUsed||[]).map(p=>`<tr><td>${p.name}</td><td>${p.qty}</td><td>$${Number(p.cost).toLocaleString()}</td><td>$${(p.cost*p.qty).toLocaleString()}</td></tr>`).join('')}
-    ${(budget.extras||[]).filter(e=>e.desc||e.price).map(e=>`<tr><td>${e.desc||'—'}</td><td>${e.qty||1}</td><td>$${Number(e.price||0).toLocaleString()}</td><td>$${(Number(e.qty||1)*Number(e.price||0)).toLocaleString()}</td></tr>`).join('')}
-    <tr class="labor"><td colspan="3">Realización de trabajo</td><td>$${Number(budget.laborCost||0).toLocaleString()}</td></tr>
-    </tbody></table></div>
-    <div class="total"><span class="total-label">Total</span><span class="total-value">$${(budget.totalCost||0).toLocaleString()}</span></div>
-    ${budget.notes?`<div class="notes">📝 ${budget.notes}</div>`:''}
-    <div class="footer"><p>${empresa.nombre} · ${empresa.telefono}</p><span class="validity">✓ Válido 15 días</span></div>
-    </body></html>`);
-    win.document.close();
-    win.focus();
-    win.print();
-    win.onafterprint = () => { win.close(); };
-  };
-
-  const printWorkOrder = repair => {
-    const win = window.open('','_blank');
-    const dateStr = repair.date?.seconds ? new Date(repair.date.seconds*1000).toLocaleDateString('es-AR') : new Date().toLocaleDateString('es-AR');
-    const paid = (repair.payments||[]).reduce((s,p)=>s+p.amount,0);
-    const debe = (repair.totalCost||0) - paid;
-    win.document.write(`<!DOCTYPE html><html><head><title>Orden de Trabajo</title>
-    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#1e293b;max-width:760px;margin:0 auto}
-    .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;margin-bottom:20px;border-bottom:3px solid #f97316}
-    .title{font-size:28px;font-weight:900;color:#0f172a}.orden{font-size:14px;font-weight:800;color:#f97316;letter-spacing:2px;text-transform:uppercase}
-    .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px}
-    .sec{margin:16px 0}.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #f1f5f9}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.item label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px}.item span{font-size:14px;font-weight:700}
-    table{width:100%;border-collapse:collapse;margin-top:8px}th{padding:8px 12px;text-align:left;font-size:11px;font-weight:700;background:#0f172a;color:white;text-transform:uppercase}
-    td{padding:9px 12px;font-size:13px;border-bottom:1px solid #f1f5f9}
-    .totals{margin-top:16px;border:2px solid #e2e8f0;border-radius:12px;overflow:hidden}
-    .tot-row{display:flex;justify-content:space-between;padding:10px 16px;font-size:13px;font-weight:600;border-bottom:1px solid #f1f5f9}
-    .tot-row.main{background:#0f172a;color:white;font-size:16px;font-weight:900}
-    .tot-row.debe{background:#fef2f2;color:#dc2626;font-weight:800}
-    .firma{margin-top:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px}
-    .firma-box{border-top:2px solid #e2e8f0;padding-top:10px;text-align:center;font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase}
-    .notas{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:10px;font-size:13px;color:#92400e;margin-top:12px}
-    </style></head><body>
-    <div class="header">
-      <div><div class="title">${tallerConfig.nombre}</div><p style="font-size:12px;color:#64748b;margin-top:4px">${tallerConfig.direccion} · ${tallerConfig.telefono}</p></div>
-      <div style="text-align:right"><div class="orden">Orden de Trabajo</div><div style="font-size:22px;font-weight:900;color:#0f172a">${repair.orderNumber||'—'}</div><div style="font-size:11px;color:#94a3b8">${dateStr}</div></div>
-    </div>
-    <div class="sec"><div class="sec-title">Vehículo</div><div class="grid2">
-      <div class="item"><label>Vehículo</label><span>${repair.vehicle||'—'}</span></div>
-      <div class="item"><label>Patente</label><span>${repair.plate||'—'}</span></div>
-      ${repair.km?`<div class="item"><label>Kilometraje</label><span>${Number(repair.km).toLocaleString()} km</span></div>`:''}
-      ${repair.clientName?`<div class="item"><label>Cliente</label><span>${repair.clientName}</span></div>`:''}
-    </div></div>
+    <tr class="labor"><td colspan="3">Mano de obra</td><td>$${Number(budget.laborCost||0).toLocaleString()}</td></tr>
+    </tbody></table></div>`:''}`:''}
     <div class="sec"><div class="sec-title">Trabajo a realizar</div>
       <p style="font-size:14px;line-height:1.8;margin-top:6px">${repair.description||'—'}</p>
     </div>
@@ -873,38 +854,49 @@ export default function App() {
     <div className={`min-h-screen font-sans ${view==='dashboard'?'md:pl-64':''}`} style={{background:'#090b0f',color:'white'}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-        *{font-family:'Space Grotesk',sans-serif;box-sizing:border-box}
+
+        /* ── BASE ── */
+        *{font-family:'Space Grotesk',sans-serif;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        html{overflow-x:hidden}
+        body{overflow-x:hidden;background:#090b0f;overscroll-behavior:none}
+        /* Prevent iOS zoom on input focus */
+        input,select,textarea{font-size:16px!important;-webkit-text-size-adjust:100%}
+        /* Prevent pull-to-refresh jitter */
+        html,body{height:100%;position:fixed;width:100%;overflow-y:auto}
+
         .font-display{font-family:'Outfit',sans-serif}
         .page-title{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;letter-spacing:-1px}
 
-        /* CARDS */
-        .card{border-radius:18px;transition:all 0.22s cubic-bezier(.4,0,.2,1)}
+        /* ── CARDS ── */
+        .card{border-radius:18px;transition:all 0.2s cubic-bezier(.22,1,.36,1)}
         .card-s{box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.06)}
-        .card-dark{box-shadow:0 1px 3px rgba(0,0,0,0.3),0 4px 20px rgba(0,0,0,0.2)}
-        .card-hover:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.18)!important}
+        .card-dark{box-shadow:0 2px 8px rgba(0,0,0,0.4)}
+        .card-hover:active{transform:scale(0.98);opacity:0.9}
 
-        /* INPUTS */
-        .inp{border-radius:12px;padding:12px 15px;width:100%;outline:none;transition:all 0.2s;font-size:14px;border:2px solid;font-family:'Space Grotesk',sans-serif}
-        .inp:focus{border-color:#f97316!important;box-shadow:0 0 0 4px rgba(249,115,22,0.1)}
+        /* ── INPUTS — 16px prevents iOS zoom ── */
+        .inp{border-radius:12px;padding:12px 15px;width:100%;outline:none;transition:border-color 0.2s;font-size:16px!important;border:2px solid;font-family:'Space Grotesk',sans-serif;-webkit-appearance:none}
+        .inp:focus{border-color:#f97316!important;box-shadow:0 0 0 3px rgba(249,115,22,0.12)}
 
-        /* BUTTONS */
-        .btn-primary{background:linear-gradient(135deg,#ff6b1a,#e85510);color:white;padding:13px 20px;border-radius:13px;font-weight:700;display:flex;align-items:center;gap:8px;justify-content:center;cursor:pointer;border:none;width:100%;font-size:15px;box-shadow:0 4px 20px rgba(249,115,22,0.4),0 1px 3px rgba(0,0,0,0.2);transition:all 0.2s;letter-spacing:0.2px}
-        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(249,115,22,0.5)}.btn-primary:disabled{opacity:0.45;transform:none;cursor:not-allowed}
-        .btn-dark{background:#1e293b;color:#f8fafc;padding:9px 16px;border-radius:13px;font-weight:700;display:flex;align-items:center;gap:6px;justify-content:center;cursor:pointer;border:none;font-size:13px;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.2)}.btn-dark:hover{background:#334155}
-        .btn-ghost{padding:9px 14px;border-radius:13px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;transition:all 0.2s;border:2px solid}
+        /* ── BUTTONS ── */
+        .btn-primary{background:linear-gradient(135deg,#ff6b1a,#e85510);color:white;padding:14px 20px;border-radius:14px;font-weight:700;display:flex;align-items:center;gap:8px;justify-content:center;cursor:pointer;border:none;width:100%;font-size:15px;box-shadow:0 4px 20px rgba(249,115,22,0.35);transition:all 0.18s cubic-bezier(.22,1,.36,1);letter-spacing:0.2px;-webkit-appearance:none}
+        .btn-primary:active{transform:scale(0.97);box-shadow:0 2px 8px rgba(249,115,22,0.3)}
+        .btn-primary:disabled{opacity:0.45;transform:none;cursor:not-allowed}
+        .btn-dark{background:rgba(255,255,255,0.07);color:#f8fafc;padding:9px 16px;border-radius:13px;font-weight:700;display:flex;align-items:center;gap:6px;justify-content:center;cursor:pointer;border:none;font-size:13px;transition:all 0.18s;-webkit-appearance:none}
+        .btn-dark:active{background:rgba(255,255,255,0.12)}
+        .btn-ghost{padding:9px 14px;border-radius:13px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;transition:all 0.18s;border:2px solid;-webkit-appearance:none}
 
-        /* LABELS & STATUS */
-        .lbl{font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;display:block}
+        /* ── LABELS & STATUS ── */
+        .lbl{font-size:11px;font-weight:700;color:#6b7280;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;display:block}
         .status-pill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px;border:1.5px solid transparent}
 
-        /* SIDEBAR NAV */
-        .nav-item{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:600;transition:all 0.2s;cursor:pointer;border:none;text-align:left;letter-spacing:0.1px}
-        .nav-item.active{background:linear-gradient(135deg,#ff6b1a,#e85510);color:white;box-shadow:0 4px 16px rgba(249,115,22,0.4)}
-        .nav-item:not(.active){color:#6b7280}.nav-item:not(.active):hover{background:rgba(255,255,255,0.07);color:#e5e7eb}
+        /* ── SIDEBAR NAV ── */
+        .nav-item{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:600;transition:all 0.18s;cursor:pointer;border:none;text-align:left;-webkit-appearance:none}
+        .nav-item.active{background:linear-gradient(135deg,#ff6b1a,#e85510);color:white;box-shadow:0 4px 16px rgba(249,115,22,0.35)}
+        .nav-item:not(.active){color:#6b7280}.nav-item:not(.active):active{background:rgba(255,255,255,0.07);color:#e5e7eb}
 
         /* MODALS */
         .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0}
-        .modal-sheet{border-radius:28px 28px 0 0;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+        .modal-sheet{border-radius:28px 28px 0 0;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:slideUp 0.3s cubic-bezier(.22,1,.36,1) both}
         .modal-center{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
 
         /* MISC */
@@ -912,19 +904,22 @@ export default function App() {
         .shutter-btn{width:72px;height:72px;border-radius:50%;background:white;border:4px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;box-shadow:0 4px 20px rgba(0,0,0,0.4)}.shutter-btn:active{transform:scale(0.92)}
         .shutter-inner{width:56px;height:56px;border-radius:50%;background:white;border:2px solid #e2e8f0}
 
-        /* ANIMATIONS */
-        @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        /* ── ANIMATIONS ── */
+        @keyframes slideUp{from{opacity:0;transform:translateY(18px) scale(0.99)}to{opacity:1;transform:translateY(0) scale(1)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-        .anim{animation:slideUp 0.22s cubic-bezier(.22,1,.36,1)}
-        .fade{animation:fadeIn 0.18s ease-out}
-        .anim-fast{animation:slideUp 0.15s cubic-bezier(.22,1,.36,1)}
+        @keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+        @keyframes slideInRight{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes scanLine{0%,100%{transform:translateY(-40px);opacity:0}20%{opacity:1}80%{opacity:1}50%{transform:translateY(40px)}}
+        .anim{animation:slideUp 0.28s cubic-bezier(.22,1,.36,1) both}
+        .anim-pop{animation:popIn 0.22s cubic-bezier(.22,1,.36,1) both}
+        .anim-right{animation:slideInRight 0.25s cubic-bezier(.22,1,.36,1) both}
+        .fade{animation:fadeIn 0.2s ease-out both}
 
         /* SCROLLBAR */
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(249,115,22,0.3);border-radius:4px}
 
         /* FLOATING NAV */
-        .floating-nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:100;border-radius:32px;padding:8px 12px;display:flex;align-items:center;gap:2px;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.1)}
+        .floating-nav{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:100;border-radius:32px;padding:8px 12px;display:flex;align-items:center;gap:2px;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.08)}
         .float-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border-radius:22px;border:none;cursor:pointer;transition:all 0.22s cubic-bezier(.4,0,.2,1);min-width:58px}
         .float-btn.active{background:linear-gradient(135deg,#ff6b1a,#e85510);box-shadow:0 4px 16px rgba(249,115,22,0.5)}
         .float-btn:not(.active){background:transparent}
@@ -1087,7 +1082,7 @@ export default function App() {
 
       {/* SLIM TOP BAR */}
       {view!=='dashboard'&&view!=='scan'&&view!=='camera'&&(
-        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:40,display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',background:'rgba(9,11,15,0.95)',borderBottom:'1px solid rgba(255,255,255,0.06)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)'}}>
+        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:40,display:'flex',alignItems:'center',gap:'12px',padding:'14px 16px',paddingTop:'max(14px,env(safe-area-inset-top))',background:'rgba(9,11,15,0.92)',borderBottom:'1px solid rgba(255,255,255,0.05)',backdropFilter:'blur(32px)',WebkitBackdropFilter:'blur(32px)'}}>
           <button onClick={()=>setView('dashboard')} style={{padding:'8px',borderRadius:'12px',background:'rgba(255,255,255,0.06)',border:'none',cursor:'pointer',color:'white',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><ChevronLeft size={20}/></button>
           <span style={{fontFamily:"'Outfit',sans-serif",fontWeight:700,fontSize:'16px',color:'white',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{
             {list:'Inventario',repairs:'Servicios',budgets:'Presupuestos',clients:'Clientes',vehicles_list:'Vehículos',history:'Historial',stock_history:'Mov. Stock',stats:'Estadísticas',ai_assistant:'Asistente IA',config:'Configuración',details:'Detalle',add:'Nuevo Repuesto',add_repair:'Nuevo Servicio',edit_repair:'Editar Servicio',add_budget:'Nuevo Presupuesto',edit_budget:'Editar Presupuesto',add_client:'Nuevo Cliente',edit_client:'Editar Cliente',add_vehicle:'Nuevo Vehículo',edit_vehicle:'Editar Vehículo',edit_product:'Editar Repuesto',search:'Búsqueda',camera:'Cámara',scan:'Escáner QR'}[view]||view
@@ -1120,7 +1115,7 @@ export default function App() {
         </div>
       )}
 
-      <main style={{padding:'16px',maxWidth:'640px',margin:'0 auto',paddingTop: view==='dashboard'?'16px':'72px',paddingBottom:'160px'}}>
+      <main style={{padding:'16px',paddingLeft:'max(16px,env(safe-area-inset-left))',paddingRight:'max(16px,env(safe-area-inset-right))',maxWidth:'640px',margin:'0 auto',paddingTop: view==='dashboard'?'16px':'72px',paddingBottom:'calc(160px + env(safe-area-inset-bottom))'}}>
 
         {/* DASHBOARD */}
         {view==='dashboard'&&(
@@ -1274,7 +1269,7 @@ export default function App() {
                 const matchStock = !invFilter.stock || (invFilter.stock==='low'&&p.quantity>0&&p.quantity<=p.minStock) || (invFilter.stock==='ok'&&p.quantity>p.minStock) || (invFilter.stock==='zero'&&p.quantity===0);
                 return matchSearch&&matchCat&&matchStock;
               }).map(item=>(
-                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} style={{background:'#111318',borderRadius:'16px',border:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:'12px',padding:'12px',cursor:'pointer',transition:'all 0.2s'}}
+                  <div key={item.id} onClick={()=>{setSelectedProduct(item);setView('details');}} style={{background:'#111318',borderRadius:'16px',border:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:'12px',padding:'12px',cursor:'pointer',transition:'all 0.2s',animation:'slideUp 0.25s cubic-bezier(.22,1,.36,1) both'}}
                     onTouchStart={e=>e.currentTarget.style.background='#1a1f2a'} onTouchEnd={e=>e.currentTarget.style.background='#111318'}>
                     {/* Thumbnail */}
                     <div style={{width:'48px',height:'48px',borderRadius:'12px',overflow:'hidden',flexShrink:0,background:'rgba(255,255,255,0.05)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -1403,55 +1398,159 @@ export default function App() {
               </div>
             )}
             {listMode==='list'&&(
-            <div className="space-y-4">
-            {[...repairs].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>(
-              <div key={rep.id} style={{background:'#111318',borderRadius:'20px',overflow:'hidden',border:'1px solid rgba(255,255,255,0.06)'}}>
-                <div style={{height:'3px',background:rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444'}}/>
-                {rep.imageUrl&&<img src={rep.imageUrl} alt="" style={{width:'100%',height:'160px',objectFit:'cover'}}/>}
-                <div style={{padding:'16px'}}>
-                  {/* Header */}
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'10px'}}>
-                    <div style={{flex:1,minWidth:0,marginRight:'12px'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'5px',flexWrap:'wrap'}}>
-                        {rep.orderNumber&&<span style={{fontSize:'10px',fontWeight:700,color:'#f97316',fontFamily:'monospace',background:'rgba(249,115,22,0.1)',padding:'2px 7px',borderRadius:'7px'}}>{rep.orderNumber}</span>}
-                        <SPill status={rep.status||'pendiente'}/>
-                        <PayBadge status={rep.paymentStatus||'debe'}/>
-                      </div>
-                      <p style={{fontWeight:800,fontSize:'16px',color:'white',marginBottom:'3px'}}>{rep.vehicle}</p>
-                      <div style={{display:'flex',gap:'10px',flexWrap:'wrap'}}>
-                        {rep.plate&&<span style={{fontSize:'11px',color:'#6b7280',fontFamily:'monospace'}}>{rep.plate}</span>}
-                        {rep.km&&<span style={{fontSize:'11px',color:'#6b7280'}}>🔢 {Number(rep.km).toLocaleString()} km</span>}
-                        {rep.clientName&&<span style={{fontSize:'11px',color:'#6b7280'}}>👤 {rep.clientName}</span>}
-                        {rep.date?.seconds&&<span style={{fontSize:'11px',color:'#6b7280'}}>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}
-                      </div>
-                    </div>
-                    <div style={{textAlign:'right',flexShrink:0}}>
-                      <p style={{fontWeight:900,fontSize:'22px',color:'#10b981',fontFamily:"'Outfit',sans-serif",lineHeight:1}}>${(rep.totalCost||0).toLocaleString()}</p>
-                      {(()=>{const paid=(rep.payments||[]).reduce((s,p)=>s+p.amount,0);return paid>0?<p style={{fontSize:'11px',color:'#f97316',fontWeight:700,marginTop:'2px'}}>Pagó ${paid.toLocaleString()}</p>:null;})()}
-                      {(()=>{const g=(rep.totalCost||0)-(rep.partsUsed||[]).reduce((s,p)=>s+(p.costOriginal||p.cost)*p.qty,0);return g>0?<p style={{fontSize:'11px',color:'#3b82f6',fontWeight:700}}>Gan ${g.toLocaleString()}</p>:null;})()}
-                    </div>
+            <div className="space-y-2">
+            {[...repairs].sort((a,b)=>(b.date?.seconds||0)-(a.date?.seconds||0)).map(rep=>{
+              const isExpanded = expandedRepair===rep.id;
+              const isSwiped = swipedRepair===rep.id;
+              const payColor = rep.paymentStatus==='pagado'?'#10b981':rep.paymentStatus==='señado'?'#f59e0b':'#ef4444';
+              const paid=(rep.payments||[]).reduce((s,p)=>s+p.amount,0);
+              const ganancia=(rep.totalCost||0)-(rep.partsUsed||[]).reduce((s,p)=>s+(p.costOriginal||p.cost)*p.qty,0);
+              return(
+              <div key={rep.id} style={{position:'relative',borderRadius:'18px',overflow:'hidden',animation:'slideUp 0.22s cubic-bezier(.22,1,.36,1) both'}}>
+                {/* SWIPE ACTIONS BACKGROUND */}
+                <div style={{position:'absolute',inset:0,display:'flex',borderRadius:'18px',overflow:'hidden'}}>
+                  {/* Left — mark as listo */}
+                  <div style={{flex:'0 0 80px',background:'linear-gradient(135deg,#10b981,#059669)',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:'4px'}}>
+                    <Check size={20} color="white"/>
+                    <span style={{fontSize:'10px',color:'white',fontWeight:700}}>Listo</span>
                   </div>
-                  {/* Description */}
-                  {rep.description&&<p style={{fontSize:'13px',color:'#9ca3af',marginBottom:'10px',fontStyle:'italic',lineHeight:1.5}}>{rep.description}</p>}
-                  {rep.notes&&<div style={{fontSize:'12px',background:'rgba(245,158,11,0.08)',color:'#fbbf24',padding:'8px 12px',borderRadius:'10px',marginBottom:'10px'}}>📝 {rep.notes}</div>}
-                  {/* Parts */}
-                  {rep.partsUsed?.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:'4px',marginBottom:'12px'}}>{rep.partsUsed.map((p,i)=><span key={i} style={{fontSize:'10px',fontWeight:700,color:'#9ca3af',background:'rgba(255,255,255,0.05)',padding:'3px 8px',borderRadius:'8px'}}>{p.qty}× {p.name}</span>)}</div>}
-                  {/* Status */}
-                  <div style={{display:'flex',gap:'4px',flexWrap:'wrap',marginBottom:'10px'}}>
-                    {Object.keys(STATUS_CONFIG).map(s=><button key={s} onClick={()=>updateRepairField(rep.id,'status',s)} style={{fontSize:'10px',fontWeight:700,padding:'5px 10px',borderRadius:'10px',border:'none',cursor:'pointer',background:(rep.status||'pendiente')===s?'#f97316':'rgba(255,255,255,0.05)',color:(rep.status||'pendiente')===s?'white':'#6b7280',transition:'all 0.15s'}}>{STATUS_CONFIG[s].icon} {STATUS_CONFIG[s].label}</button>)}
-                    {Object.entries(PAYMENT_CONFIG).map(([key,cfg])=><button key={key} onClick={()=>updateRepairField(rep.id,'paymentStatus',key)} style={{fontSize:'10px',fontWeight:700,padding:'5px 10px',borderRadius:'10px',cursor:'pointer',background:(rep.paymentStatus||'debe')===key?cfg.bg:'rgba(255,255,255,0.05)',color:(rep.paymentStatus||'debe')===key?cfg.color:'#6b7280',border:`1px solid ${(rep.paymentStatus||'debe')===key?cfg.color:'transparent'}`,transition:'all 0.15s'}}>{cfg.icon} {cfg.label}</button>)}
-                  </div>
-                  {/* Actions */}
-                  <div style={{display:'flex',gap:'6px',flexWrap:'wrap',borderTop:'1px solid rgba(255,255,255,0.05)',paddingTop:'10px'}}>
-                    <button onClick={()=>{setEditingRepair({...rep});setClientSearch(rep.clientName||'');setView('edit_repair');}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.06)',color:'#e2e8f0',border:'none',cursor:'pointer'}}><Edit3 size={12}/>Editar</button>
-                    <button onClick={()=>{setShowPaymentModal(rep.id);setPaymentAmount('');}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(16,185,129,0.1)',color:'#10b981',border:'none',cursor:'pointer'}}><DollarSign size={12}/>Pago</button>
-                    {(rep.status==='listo'||rep.status==='entregado')&&<button onClick={()=>openConvertToBudget(rep)} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(59,130,246,0.1)',color:'#3b82f6',border:'none',cursor:'pointer'}}><FileText size={12}/>Pres.</button>}
-                    <button onClick={()=>printWorkOrder(rep)} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.05)',color:'#9ca3af',border:'none',cursor:'pointer'}}><Printer size={12}/>OT</button>
-                    <button onClick={()=>deleteItem('repairs',rep.id,`${rep.vehicle}`)} style={{marginLeft:'auto',padding:'8px 10px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',color:'#ef4444',border:'none',cursor:'pointer'}}><Trash2 size={13}/></button>
+                  <div style={{flex:1}}/>
+                  {/* Right — actions */}
+                  <div style={{flex:'0 0 200px',display:'flex'}}>
+                    <div style={{flex:1,background:'rgba(59,130,246,0.85)',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:'4px'}}
+                      onClick={()=>{setEditingRepair({...rep});setClientSearch(rep.clientName||'');setView('edit_repair');setSwipedRepair(null);}}>
+                      <Edit3 size={18} color="white"/>
+                      <span style={{fontSize:'10px',color:'white',fontWeight:700}}>Editar</span>
+                    </div>
+                    <div style={{flex:1,background:'rgba(16,185,129,0.85)',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:'4px'}}
+                      onClick={()=>{setShowPaymentModal(rep.id);setPaymentAmount('');setSwipedRepair(null);}}>
+                      <DollarSign size={18} color="white"/>
+                      <span style={{fontSize:'10px',color:'white',fontWeight:700}}>Pago</span>
+                    </div>
+                    <div style={{flex:1,background:'rgba(239,68,68,0.85)',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:'4px'}}
+                      onClick={()=>{deleteItem('repairs',rep.id,rep.vehicle);setSwipedRepair(null);}}>
+                      <Trash2 size={18} color="white"/>
+                      <span style={{fontSize:'10px',color:'white',fontWeight:700}}>Borrar</span>
+                    </div>
                   </div>
                 </div>
+
+                {/* CARD CONTENT — slides on swipe */}
+                <div
+                  style={{
+                    position:'relative',
+                    background:'#111318',
+                    borderRadius:'18px',
+                    border:'1px solid rgba(255,255,255,0.06)',
+                    transform: isSwiped==='left'?'translateX(-200px)':isSwiped==='right'?'translateX(80px)':'translateX(0)',
+                    transition:'transform 0.28s cubic-bezier(.22,1,.36,1)',
+                    cursor:'pointer',
+                    userSelect:'none',
+                    WebkitUserSelect:'none',
+                  }}
+                  onTouchStart={e=>{
+                    const t=e.touches[0];
+                    swipeRef.current={x:t.clientX,y:t.clientY,id:rep.id,moved:false};
+                  }}
+                  onTouchMove={e=>{
+                    const ref=swipeRef.current;
+                    if(!ref||ref.id!==rep.id) return;
+                    const dx=e.touches[0].clientX-ref.x;
+                    const dy=e.touches[0].clientY-ref.y;
+                    if(Math.abs(dy)>Math.abs(dx)&&!ref.moved) return;
+                    ref.moved=true;
+                    e.preventDefault();
+                  }}
+                  onTouchEnd={e=>{
+                    const ref=swipeRef.current;
+                    if(!ref||ref.id!==rep.id||!ref.moved) return;
+                    const dx=e.changedTouches[0].clientX-ref.x;
+                    if(dx>60){
+                      // swipe right = mark listo
+                      updateRepairField(rep.id,'status','listo');
+                      try{navigator.vibrate&&navigator.vibrate([10,50,10]);}catch{}
+                      setSwipedRepair(null);
+                    } else if(dx<-60){
+                      setSwipedRepair(isSwiped==='left'?null:'left');
+                    } else {
+                      setSwipedRepair(null);
+                    }
+                    swipeRef.current={};
+                  }}
+                  onClick={()=>{if(swipedRepair){setSwipedRepair(null);return;}setExpandedRepair(isExpanded?null:rep.id);}}
+                >
+                  {/* Color bar */}
+                  <div style={{height:'3px',background:payColor,borderRadius:'18px 18px 0 0'}}/>
+
+                  {/* COMPACT ROW */}
+                  <div style={{padding:'12px 14px',display:'flex',alignItems:'center',gap:'10px'}}>
+                    {/* Status dot */}
+                    <div style={{width:'10px',height:'10px',borderRadius:'50%',flexShrink:0,background:
+                      rep.status==='listo'?'#10b981':rep.status==='en_proceso'?'#3b82f6':rep.status==='entregado'?'#6b7280':'#f59e0b'
+                    }}/>
+                    {/* Main info */}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'2px'}}>
+                        {rep.orderNumber&&<span style={{fontSize:'10px',fontWeight:700,color:'#f97316',fontFamily:'monospace'}}>{rep.orderNumber}</span>}
+                        <p style={{fontWeight:700,fontSize:'14px',color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{rep.vehicle}</p>
+                      </div>
+                      <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+                        {rep.plate&&<span style={{fontSize:'11px',color:'#6b7280',fontFamily:'monospace'}}>{rep.plate}</span>}
+                        {rep.clientName&&<span style={{fontSize:'11px',color:'#6b7280',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>· {rep.clientName}</span>}
+                      </div>
+                    </div>
+                    {/* Price + chevron */}
+                    <div style={{textAlign:'right',flexShrink:0,display:'flex',alignItems:'center',gap:'8px'}}>
+                      <div>
+                        <p style={{fontWeight:900,fontSize:'16px',color:'#10b981',fontFamily:"'Outfit',sans-serif",lineHeight:1}}>${(rep.totalCost||0).toLocaleString()}</p>
+                        <PayBadge status={rep.paymentStatus||'debe'}/>
+                      </div>
+                      <div style={{color:'#4b5563',transition:'transform 0.2s',transform:isExpanded?'rotate(180deg)':'rotate(0deg)'}}>
+                        <ChevronDown size={16}/>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* EXPANDED DETAIL */}
+                  {isExpanded&&(
+                    <div style={{padding:'0 14px 14px',borderTop:'1px solid rgba(255,255,255,0.05)',marginTop:'0',animation:'slideUp 0.2s cubic-bezier(.22,1,.36,1)'}}>
+                      <div style={{paddingTop:'12px',display:'flex',flexDirection:'column',gap:'10px'}}>
+                        {/* Extra info row */}
+                        <div style={{display:'flex',gap:'10px',flexWrap:'wrap'}}>
+                          {rep.km&&<span style={{fontSize:'11px',color:'#6b7280'}}>🔢 {Number(rep.km).toLocaleString()} km</span>}
+                          {rep.date?.seconds&&<span style={{fontSize:'11px',color:'#6b7280'}}>📅 {new Date(rep.date.seconds*1000).toLocaleDateString('es-AR')}</span>}
+                          {rep.createdBy&&<span style={{fontSize:'11px',color:'#f97316',background:'rgba(249,115,22,0.08)',padding:'1px 7px',borderRadius:'6px',fontWeight:600}}>⚡ {rep.createdBy}</span>}
+                          {paid>0&&<span style={{fontSize:'11px',color:'#f97316',fontWeight:700}}>Pagó ${paid.toLocaleString()}</span>}
+                          {ganancia>0&&<span style={{fontSize:'11px',color:'#3b82f6',fontWeight:700}}>Gan ${ganancia.toLocaleString()}</span>}
+                        </div>
+                        {/* Description */}
+                        {rep.description&&<p style={{fontSize:'13px',color:'#9ca3af',fontStyle:'italic',lineHeight:1.5}}>{rep.description}</p>}
+                        {rep.notes&&<div style={{fontSize:'12px',background:'rgba(245,158,11,0.08)',color:'#fbbf24',padding:'8px 12px',borderRadius:'10px'}}>📝 {rep.notes}</div>}
+                        {/* Parts */}
+                        {rep.partsUsed?.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:'4px'}}>{rep.partsUsed.map((p,i)=><span key={i} style={{fontSize:'10px',fontWeight:700,color:'#9ca3af',background:'rgba(255,255,255,0.05)',padding:'3px 8px',borderRadius:'8px'}}>{p.qty}× {p.name}</span>)}</div>}
+                        {/* Image */}
+                        {rep.imageUrl&&<img src={rep.imageUrl} alt="" style={{width:'100%',height:'140px',objectFit:'cover',borderRadius:'12px'}}/>}
+                        {/* Status buttons */}
+                        <div style={{display:'flex',gap:'4px',flexWrap:'wrap'}}>
+                          {Object.keys(STATUS_CONFIG).map(s=><button key={s} onClick={e=>{e.stopPropagation();updateRepairField(rep.id,'status',s);}} style={{fontSize:'10px',fontWeight:700,padding:'6px 10px',borderRadius:'10px',border:'none',cursor:'pointer',background:(rep.status||'pendiente')===s?'#f97316':'rgba(255,255,255,0.05)',color:(rep.status||'pendiente')===s?'white':'#6b7280',transition:'all 0.15s'}}>{STATUS_CONFIG[s].icon} {STATUS_CONFIG[s].label}</button>)}
+                          {Object.entries(PAYMENT_CONFIG).map(([key,cfg])=><button key={key} onClick={e=>{e.stopPropagation();updateRepairField(rep.id,'paymentStatus',key);}} style={{fontSize:'10px',fontWeight:700,padding:'6px 10px',borderRadius:'10px',cursor:'pointer',background:(rep.paymentStatus||'debe')===key?cfg.bg:'rgba(255,255,255,0.05)',color:(rep.paymentStatus||'debe')===key?cfg.color:'#6b7280',border:`1px solid ${(rep.paymentStatus||'debe')===key?cfg.color:'transparent'}`,transition:'all 0.15s'}}>{cfg.icon} {cfg.label}</button>)}
+                        </div>
+                        {/* Action buttons */}
+                        <div style={{display:'flex',gap:'6px',flexWrap:'wrap',borderTop:'1px solid rgba(255,255,255,0.05)',paddingTop:'10px'}}>
+                          <button onClick={e=>{e.stopPropagation();setEditingRepair({...rep});setClientSearch(rep.clientName||'');setView('edit_repair');}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.06)',color:'#e2e8f0',border:'none',cursor:'pointer'}}><Edit3 size={12}/>Editar</button>
+                          <button onClick={e=>{e.stopPropagation();try{navigator.vibrate&&navigator.vibrate(10);}catch{}setShowPaymentModal(rep.id);setPaymentAmount('');}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(16,185,129,0.1)',color:'#10b981',border:'none',cursor:'pointer'}}><DollarSign size={12}/>Pago</button>
+                          {(rep.status==='listo'||rep.status==='entregado')&&<button onClick={e=>{e.stopPropagation();openConvertToBudget(rep);}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(59,130,246,0.1)',color:'#3b82f6',border:'none',cursor:'pointer'}}><FileText size={12}/>Pres.</button>}
+                          <button onClick={e=>{e.stopPropagation();printWorkOrder(rep);}} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',fontWeight:700,padding:'8px 14px',borderRadius:'12px',background:'rgba(255,255,255,0.05)',color:'#9ca3af',border:'none',cursor:'pointer'}}><Printer size={12}/>OT</button>
+                          <button onClick={e=>{e.stopPropagation();deleteItem('repairs',rep.id,rep.vehicle);}} style={{marginLeft:'auto',padding:'8px 10px',borderRadius:'12px',background:'rgba(239,68,68,0.08)',color:'#ef4444',border:'none',cursor:'pointer'}}><Trash2 size={13}/></button>
+                        </div>
+                        {/* Swipe hint */}
+                        <p style={{fontSize:'10px',color:'#374151',textAlign:'center'}}>← deslizá para acciones · → deslizá para marcar listo</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            ))}
+            );})}
             {repairs.length===0&&<EC icon={<Car size={36}/>} text="No hay servicios" dm={dm}/>}
             </div>
             )}
@@ -1484,7 +1583,7 @@ export default function App() {
             {listMode==='list'&&[...budgets].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(budget=>{
               const emp=(tallerConfig.empresas||[]).find(e=>e.id===budget.empresaId)||tallerConfig.empresas?.[0];
               return (
-                <div key={budget.id} style={{background:'#111318',borderRadius:'20px',overflow:'hidden',border:'1px solid rgba(255,255,255,0.06)'}}>
+                <div key={budget.id} style={{background:'#111318',borderRadius:'20px',overflow:'hidden',border:'1px solid rgba(255,255,255,0.06)',animation:'slideUp 0.25s cubic-bezier(.22,1,.36,1) both'}}>
                   <div style={{height:'3px',background:'linear-gradient(90deg,#3b82f6,#6366f1)'}}/>
                   <div style={{padding:'16px'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'10px'}}>
@@ -1902,10 +2001,10 @@ export default function App() {
 
         {/* FORMS */}
         {(view==='add_repair'||view==='edit_repair')&&(
-          <RepForm isEdit={view==='edit_repair'} data={view==='edit_repair'?editingRepair:newRepair} setData={view==='edit_repair'?setEditingRepair:setNewRepair} onSubmit={view==='edit_repair'?updateRepair:saveRepair} onCancel={()=>{setView('repairs');setClientSearch('');setEditingRepair(null);}} clients={clients} getCV={getClientVehicles} cs={clientSearch} setCs={setClientSearch} showDD={showClientDD} setShowDD={setShowClientDD} onSC={c=>selectClient(c,view==='edit_repair'?'editRepair':'repair')} onSV={v=>selectVehicle(v,view==='edit_repair'?setEditingRepair:setNewRepair)} inventory={inventory} dm={dm} sc={startCamera} onCreateClientAndVehicle={createClientAndVehicle}/>
+          <RepForm isEdit={view==='edit_repair'} data={view==='edit_repair'?editingRepair:newRepair} setData={view==='edit_repair'?setEditingRepair:setNewRepair} onSubmit={view==='edit_repair'?updateRepair:saveRepair} onCancel={()=>{setView('repairs');setClientSearch('');setEditingRepair(null);}} clients={clients} getCV={getClientVehicles} cs={clientSearch} setCs={setClientSearch} showDD={showClientDD} setShowDD={setShowClientDD} onSC={c=>selectClient(c,view==='edit_repair'?'editRepair':'repair')} onSV={v=>selectVehicle(v,view==='edit_repair'?setEditingRepair:setNewRepair)} inventory={inventory} dm={dm} sc={startCamera} onCreateClientAndVehicle={createClientAndVehicle} onAddVehicle={async(veh,setV)=>{const target=view==='edit_repair'?editingRepair:newRepair;if(!target?.clientId)return;const v=await addVehicleToClient(target.clientId,target.clientName,veh,setV);if(v)selectVehicle(v,view==='edit_repair'?setEditingRepair:setNewRepair);}}/>
         )}
         {(view==='add_budget'||view==='edit_budget')&&(
-          <BudForm isEdit={view==='edit_budget'} data={view==='edit_budget'?editingBudget:newBudget} setData={view==='edit_budget'?setEditingBudget:setNewBudget} onSubmit={view==='edit_budget'?updateBudget:saveBudget} onCancel={()=>{setView('budgets');setClientSearchB('');setEditingBudget(null);}} clients={clients} getCV={getClientVehicles} cs={clientSearchB} setCs={setClientSearchB} showDD={showClientDDB} setShowDD={setShowClientDDB} onSC={c=>selectClient(c,view==='edit_budget'?'editBudget':'budget')} onSV={v=>selectVehicle(v,view==='edit_budget'?setEditingBudget:setNewBudget)} inventory={inventory} dm={dm} empresas={tallerConfig.empresas||[]} prefilled={view==='add_budget'&&!!newBudget.vehicle}/>
+          <BudForm isEdit={view==='edit_budget'} data={view==='edit_budget'?editingBudget:newBudget} setData={view==='edit_budget'?setEditingBudget:setNewBudget} onSubmit={view==='edit_budget'?updateBudget:saveBudget} onCancel={()=>{setView('budgets');setClientSearchB('');setEditingBudget(null);}} clients={clients} getCV={getClientVehicles} cs={clientSearchB} setCs={setClientSearchB} showDD={showClientDDB} setShowDD={setShowClientDDB} onSC={c=>selectClient(c,view==='edit_budget'?'editBudget':'budget')} onSV={v=>selectVehicle(v,view==='edit_budget'?setEditingBudget:setNewBudget)} inventory={inventory} dm={dm} empresas={tallerConfig.empresas||[]} prefilled={view==='add_budget'&&!!newBudget.vehicle} onAddVehicle={async(veh,setV)=>{const target=view==='edit_budget'?editingBudget:newBudget;if(!target?.clientId)return;const v=await addVehicleToClient(target.clientId,target.clientName,veh,setV);if(v)selectVehicle(v,view==='edit_budget'?setEditingBudget:setNewBudget);}}/>
         )}
         {(view==='add'||view==='edit_product')&&(
           <ProdForm isEdit={view==='edit_product'} data={view==='edit_product'?editingProduct:newProduct} setData={view==='edit_product'?setEditingProduct:setNewProduct} onSubmit={view==='edit_product'?updateProduct:saveProduct} onCancel={()=>setView('list')} dm={dm} sc={t=>startCamera(view==='edit_product'?'editProduct':t)} cats={categories}/>
@@ -1944,8 +2043,8 @@ export default function App() {
                   {[['top-0 left-0 border-t-4 border-l-4 rounded-tl-2xl'],['top-0 right-0 border-t-4 border-r-4 rounded-tr-2xl'],['bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl'],['bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl']].map(([cls],i)=>(
                     <div key={i} className={`absolute w-8 h-8 border-orange-500 ${cls}`}/>
                   ))}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-full h-0.5 bg-orange-500 opacity-60" style={{animation:'pulse 1.5s ease-in-out infinite'}}/>
+                  <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+                    <div style={{width:'100%',height:'2px',background:'linear-gradient(90deg,transparent,#f97316,#f97316,transparent)',animation:'scanLine 1.8s ease-in-out infinite'}}/>
                   </div>
                 </div>
               </div>
@@ -2029,10 +2128,36 @@ function CDrop({cs,setCs,showDD,setShowDD,clients,onSC,dm}){
   </div>;
 }
 
-function VDrop({clientId,plate,onSV,getCV,dm}){
+function VDrop({clientId,plate,onSV,getCV,dm,onAddVehicle}){
+  const [showAdd,setShowAdd]=React.useState(false);
+  const [newV,setNewV]=React.useState({make:'',model:'',year:'',plate:'',km:''});
   const list=getCV(clientId);
-  if(!clientId||list.length===0) return null;
-  return<div><span className="lbl">Vehículos del cliente</span><div className="flex gap-2 flex-wrap">{list.map((v,i)=><button key={i} type="button" onClick={()=>onSV(v)} className={`px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${plate===v.plate?'border-orange-500 bg-orange-50 text-orange-700':dm?'border-[#30363d] bg-[#0d1117] text-slate-400':'border-slate-200 bg-slate-50 text-slate-600'}`}>🚗 {v.make} {v.model} · <span className="font-mono">{v.plate}</span></button>)}</div></div>;
+  if(!clientId) return null;
+  return(
+    <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <span className="lbl" style={{margin:0}}>Vehículo del cliente</span>
+        {clientId&&<button type="button" onClick={()=>setShowAdd(!showAdd)} style={{fontSize:'11px',fontWeight:700,color:showAdd?'#f97316':'#6b7280',background:showAdd?'rgba(249,115,22,0.1)':'transparent',border:'none',cursor:'pointer',padding:'4px 8px',borderRadius:'8px',display:'flex',alignItems:'center',gap:'4px'}}><Plus size={12}/>{showAdd?'Cancelar':'Nuevo vehículo'}</button>}
+      </div>
+      {list.length>0&&<div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
+        {list.map((v,i)=><button key={i} type="button" onClick={()=>onSV(v)} style={{padding:'8px 12px',borderRadius:'12px',fontSize:'12px',fontWeight:700,border:`2px solid ${plate===v.plate?'#f97316':'rgba(255,255,255,0.1)'}`,background:plate===v.plate?'rgba(249,115,22,0.15)':'rgba(255,255,255,0.04)',color:plate===v.plate?'#f97316':'#9ca3af',cursor:'pointer',transition:'all 0.15s'}}>🚗 {v.make} {v.model} <span style={{fontFamily:'monospace',opacity:0.7}}>· {v.plate}</span></button>)}
+      </div>}
+      {list.length===0&&!showAdd&&<p style={{fontSize:'12px',color:'#4b5563',padding:'8px 0'}}>Este cliente no tiene vehículos. Agregá uno con el botón de arriba.</p>}
+      {showAdd&&(
+        <div style={{background:'rgba(20,184,166,0.06)',border:'1.5px solid rgba(20,184,166,0.2)',borderRadius:'14px',padding:'12px',display:'flex',flexDirection:'column',gap:'8px'}}>
+          <p style={{fontSize:'12px',fontWeight:700,color:'#14b8a6',margin:0}}>🚗 Nuevo vehículo</p>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+            <FInp label="Marca" placeholder="Toyota" value={newV.make} onChange={e=>setNewV(v=>({...v,make:e.target.value}))} dm={dm}/>
+            <FInp label="Modelo" placeholder="Corolla" value={newV.model} onChange={e=>setNewV(v=>({...v,model:e.target.value}))} dm={dm}/>
+            <FInp label="Año" placeholder="2020" value={newV.year} onChange={e=>setNewV(v=>({...v,year:e.target.value}))} dm={dm}/>
+            <FInp label="Patente" placeholder="ABC123" value={newV.plate} onChange={e=>setNewV(v=>({...v,plate:e.target.value.toUpperCase()}))} dm={dm}/>
+            <FInp label="Km" type="number" placeholder="50000" value={newV.km} onChange={e=>setNewV(v=>({...v,km:e.target.value}))} dm={dm}/>
+          </div>
+          <button type="button" onClick={async()=>{if(!newV.make.trim())return;await onAddVehicle(newV,setNewV);setShowAdd(false);}} style={{background:'linear-gradient(135deg,#14b8a6,#0d9488)',color:'white',border:'none',borderRadius:'10px',padding:'9px 14px',fontWeight:700,fontSize:'13px',cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',justifyContent:'center'}}><Check size={13}/>Agregar vehículo</button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PSel({inventory,parts,onChange,dm}){
@@ -2103,7 +2228,7 @@ function TBox({parts,laborCost,extras,color='green'}){
   return<div className="rounded-2xl p-4 text-sm font-bold" style={{background:color==='green'?'rgba(16,185,129,0.12)':'rgba(59,130,246,0.12)',border:`1px solid ${color==='green'?'rgba(16,185,129,0.25)':'rgba(59,130,246,0.25)'}`,color:color==='green'?'#10b981':'#3b82f6'}}>💰 Total: ${t.toLocaleString()}</div>;
 }
 
-function RepForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,showDD,setShowDD,onSC,onSV,inventory,dm,sc,onCreateClientAndVehicle}){
+function RepForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,showDD,setShowDD,onSC,onSV,inventory,dm,sc,onCreateClientAndVehicle,onAddVehicle}){
   const [showNewClient,setShowNewClient]=useState(false);
   const [newCl,setNewCl]=useState({name:'',phone:'',email:''});
   const [newVeh,setNewVeh]=useState({make:'',model:'',year:'',plate:'',km:''});
@@ -2141,7 +2266,7 @@ function RepForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,s
         </div>
       )}
     </div>
-    <VDrop clientId={data.clientId} plate={data.plate} onSV={onSV} getCV={getCV} dm={dm}/>
+    <VDrop clientId={data.clientId} plate={data.plate} onSV={onSV} getCV={getCV} dm={dm} onAddVehicle={onAddVehicle}/>
     <div className="grid grid-cols-2 gap-3">
       <FInp label="Vehículo *" required placeholder="Toyota Corolla" value={data.vehicle||''} onChange={e=>setData(f=>({...f,vehicle:e.target.value}))} dm={dm}/>
       <FInp label="Patente" placeholder="ABC123" className={`inp uppercase font-mono ${dm?'bg-[#0d1117] border-[#30363d] text-white':'bg-slate-50 border-slate-200'}`} value={data.plate||''} onChange={e=>setData(f=>({...f,plate:e.target.value.toUpperCase()}))} dm={dm}/>
@@ -2159,7 +2284,7 @@ function RepForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,s
   </FCard>;
 }
 
-function BudForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,showDD,setShowDD,onSC,onSV,inventory,dm,empresas,prefilled}){
+function BudForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,showDD,setShowDD,onSC,onSV,inventory,dm,empresas,prefilled,onAddVehicle}){
   if(!data) return null;
   return<FCard onSubmit={onSubmit} title={isEdit?'Editar Presupuesto':'Nuevo Presupuesto'} onCancel={onCancel} dm={dm}>
     {prefilled&&<span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-lg font-bold self-start">Datos precargados — revisá</span>}
@@ -2175,7 +2300,7 @@ function BudForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,s
     </div>}
     <CDrop cs={cs} setCs={setCs} showDD={showDD} setShowDD={setShowDD} clients={clients} onSC={onSC} dm={dm}/>
     <FInp label="Teléfono cliente" placeholder="11-1234-5678" value={data.clientPhone||''} onChange={e=>setData(f=>({...f,clientPhone:e.target.value}))} dm={dm}/>
-    <VDrop clientId={data.clientId} plate={data.plate} onSV={onSV} getCV={getCV} dm={dm}/>
+    <VDrop clientId={data.clientId} plate={data.plate} onSV={onSV} getCV={getCV} dm={dm} onAddVehicle={onAddVehicle}/>
     <div className="grid grid-cols-2 gap-3">
       <FInp label="Vehículo *" required placeholder="Ford Ka" value={data.vehicle||''} onChange={e=>setData(f=>({...f,vehicle:e.target.value}))} dm={dm}/>
       <FInp label="Patente" placeholder="ABC123" value={data.plate||''} onChange={e=>setData(f=>({...f,plate:e.target.value.toUpperCase()}))} dm={dm}/>
@@ -2187,6 +2312,20 @@ function BudForm({isEdit,data,setData,onSubmit,onCancel,clients,getCV,cs,setCs,s
     {/* Excel-style calculator for extra line items */}
     <BudCalc extras={data.extras||[]} onChange={extras=>setData(f=>({...f,extras}))} dm={dm}/>
     <FTA label="Notas" placeholder="Condiciones, garantía..." value={data.notes||''} onChange={e=>setData(f=>({...f,notes:e.target.value}))} dm={dm}/>
+    {/* Toggle: mostrar detalle al cliente */}
+    <div onClick={()=>setData(f=>({...f,showDetail:f.showDetail===false?true:false}))} style={{display:'flex',alignItems:'center',gap:'12px',cursor:'pointer',padding:'12px 14px',borderRadius:'14px',background:(data.showDetail===false)?'rgba(239,68,68,0.06)':'rgba(16,185,129,0.06)',border:`1.5px solid ${data.showDetail===false?'rgba(239,68,68,0.2)':'rgba(16,185,129,0.2)'}`,transition:'all 0.2s',userSelect:'none'}}>
+      <div style={{width:'22px',height:'22px',borderRadius:'7px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.2s',background:data.showDetail===false?'rgba(239,68,68,0.15)':'linear-gradient(135deg,#10b981,#059669)'}}>
+        {data.showDetail!==false?<Check size={13} color="white"/>:<X size={13} color="#ef4444"/>}
+      </div>
+      <div style={{flex:1}}>
+        <p style={{fontSize:'13px',fontWeight:700,color:'white',margin:0}}>
+          {data.showDetail===false?'Detalle oculto al cliente':'Detalle visible al cliente'}
+        </p>
+        <p style={{fontSize:'11px',color:'#6b7280',margin:0,marginTop:'2px'}}>
+          {data.showDetail===false?'El impreso solo muestra el total — el desglose queda para vos':'Se imprimen los repuestos y precios unitarios'}
+        </p>
+      </div>
+    </div>
     <TBox parts={data.partsUsed} laborCost={data.laborCost} extras={data.extras} color="blue"/>
     <FBtn>{isEdit?'Guardar cambios':'Guardar Presupuesto'}</FBtn>
   </FCard>;
